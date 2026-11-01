@@ -65,18 +65,3 @@ record live in `../benchmarks/track-b/`, outside the scored directory.
 Docker daemon access on the development machine is denied. Native builds and
 validation are available; a Docker build, sandbox check, and official leaderboard
 measurement must still be performed on a machine with Docker access.
-
-## November 1 follow-up: independently tested improvements
-
-The corpus tokenizer now classifies 32 bytes at a time using AVX2. A token
-spanning adjacent SIMD chunks is kept intact, and ASCII-only, byte-based
-case folding remains unchanged. Dense Boolean result aggregation now uses
-`popcount` to count matching document IDs and six weighted `popcount` calls
-to calculate the sum of bit positions. Only the first ten matching IDs are
-enumerated in dense result sets; short sparse bitmap words use the previous
-per-bit method. No new dependencies or build flags were introduced.
-
-These changes are an *unsubmitted candidate*. The external synthetic workload
-results and correctness checks are recorded in PERF.md; validate against the
-published full-seed1 output hash in the official board environment before
-relying on leaderboard results.
