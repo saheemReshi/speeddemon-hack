@@ -196,6 +196,18 @@ class Names {
       raw = slot.key;
     size_t n = name.size();
     const char *value = name.data();
+    // Two overlapping 16-byte comparisons cover every byte of 17..32-byte
+    // keys; unlike a fingerprint, this remains exact for hash collisions.
+    if (n > 16 && n <= 32) {
+      auto left = _mm_xor_si128(
+          _mm_loadu_si128(reinterpret_cast<const __m128i *>(raw)),
+          _mm_loadu_si128(reinterpret_cast<const __m128i *>(value)));
+      auto right = _mm_xor_si128(
+          _mm_loadu_si128(reinterpret_cast<const __m128i *>(raw + n - 16)),
+          _mm_loadu_si128(reinterpret_cast<const __m128i *>(value + n - 16)));
+      auto difference = _mm_or_si128(left, right);
+      return _mm_testz_si128(difference, difference);
+    }
     if (n >= 8 && n <= 16) {
       uint64_t a, b, c, d;
       memcpy(&a, raw, 8);
