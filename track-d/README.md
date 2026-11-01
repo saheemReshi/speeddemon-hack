@@ -1,48 +1,59 @@
-# Track D: Traverse
+# Track D: Traverse — C++20
 
-C++20, zero third-party dependencies. Reads `/data/graph.txt` and `/data/queries.txt`, writes only `/out/distances.txt`, and exits 0 on success. The frozen [specification](https://github.com/hackathon-raptors/speed-demon-2026/blob/main/specs/d-traverse.md) defines the input and exact output. No input-specific results or indexes are embedded.
+Zero third-party dependencies. Reads `/data/graph.txt` and `/data/queries.txt`, writes exactly `/out/distances.txt`, and exits 0 on success. All input-derived work happens inside the run. The frozen [specification](https://github.com/hackathon-raptors/speed-demon-2026/blob/main/specs/d-traverse.md) defines the contract.
 
-## Approach
+## Current result
 
-The input is mapped read-only and parsed directly as ASCII integers. After `mmap`, integer parsing consists of ordinary userspace memory reads; it makes no per-number system calls and creates no strings. Mapping also avoids copying the entire file into a private buffer. The parser relies on the spec's well-formed, single-delimiter, trailing-LF grammar.
+The latest official baseline supplied at stop is **639 ms, 182 MB, K=11.221**. The preserved local baseline snapshot is `67e7631` with the earlier reported S=257. This revision has not been pushed or scored officially. Conditional K from local ratios is **17.70**, not an official score. Work is stopped; see `benchmarks/track-d-v2/CHECKPOINT.md`.
 
-One pass reads edge triples and counts incoming/outgoing degrees. Prefix sums and a scatter pass produce forward and reverse compressed sparse row (CSR) graphs. Each graph has contiguous `(neighbor, uint32 weight)` edges and an offset array. The temporary triples and file mapping are released before searching. Every edge is retained, including duplicates, parallel edges, self-loops and zero weights.
+In seven interleaved local full-data runs, the unchanged baseline took 1148.3 ms median and the new solution 587.5 ms. Maximum sampled anonymous memory fell from 171.5 to 64.2 MiB. Local formatted code count is 409, including Dockerfile. These are development measurements, not official T, M or S. See [PERF.md](PERF.md) and [measurements-v2.json](measurements-v2.json) for the experiments, hashes, raw runs and projection caveats.
 
-Each query uses bidirectional Dijkstra. The backward search follows reversed original edges, preserving directed semantics. We expand the smaller queue, alternating equal sizes. This balances work even when one end has enormous initial weights. A meeting gives an upper bound; termination requires the sum of queue minima to reach that bound. Stale entries are skipped. Zero weights remain legal.
+## Graph construction and representation
 
-Each worker owns reusable radix heaps and distance arrays. Radix heaps exploit nondecreasing integer keys; bucket storage is retained between queries. Query generation tags avoid clearing a node-sized array every time. An atomic counter distributes queries dynamically, and answers are stored at their original indices. Joining workers synchronizes results before output.
+The read-only input is mapped and divided into six byte ranges whose boundaries are advanced to complete LF-terminated records. A direct ASCII parser consumes the first digit, then scans until SP or LF. This relies on the frozen well-formed numeric grammar; it is not a general text parser.
 
-## Compact state without approximate answers
+The first parallel pass counts incoming/outgoing degrees with shared atomic bytes and counts large weights per input range. Every byte wrap records an additional 256 edges; a degree of 300 is stored as 44 plus one wrap. After joining, the code reconstructs exact degrees. Relative insertion cursors reuse these bytes when no count wrapped; otherwise the run uses full uint32 cursors. High degrees are supported rather than assumed absent.
 
-The first search uses 32-bit words: 11 high bits identify the query and 21 low bits hold a distance below `2^21`. Queue entries are only 8 bytes. Entries from older generations are absent; when the tag wraps, arrays are cleared before reusing tags.
+Each direction uses a 12-byte record per node, with two edge words inline and the remaining edges in a contiguous CSR spill array:
 
-The compact search returns an answer **only if it is below `2^21`**. Since weights are nonnegative, every prefix of any shorter competing path would also be below that limit and would have remained eligible. Thus every returned answer is exact. Queries without such an answer are rerun with 64-bit words after all compact worker state is destroyed. These include unreachable queries as well as long paths.
+```text
+node[u]:  metadata | edge[0] | edge[1]
+metadata & 3:   degree 0, 1, 2, or at least 3
+metadata >> 2:  spill start; node[u+1] supplies the spill end
+```
 
-The fallback has 53 distance bits. The frozen graph has 1,740,512 nodes, and `(n-1) * UINT32_MAX < 2^53` for all accepted `n <= 2^21`, so it covers every possible shortest path. Edge-weight addition widens **before** adding, including in the compact search. No distribution assumption is needed for correctness.
+The sentinel record `node[n]` supplies the final spill endpoint. A zero edge word is legitimate data: degree tags determine which slots exist. Prefix metadata and atomic slot reservations ensure every edge has a unique destination. Phase joins synchronize the relaxed counters before the next phase reads them.
 
-Six workers match the target's six physical P-cores and use roughly 80 MiB of distance state, compared with 159 MiB for six workers using 64-bit state. Forward/reverse CSR uses about 90 MiB. `D_THREADS` may select 1–12 workers for controlled experiments; the default is six. This machine has only four P-cores, so the final worker choice still needs a board measurement.
+A common edge uses 21 vertex bits and 10 weight bits in one uint32. Bit 31 selects an entry in a shared full `{from, to, uint32 weight}` array for weights of 1,024 or more. Thus UINT32_MAX and every other permitted weight remain exact. Reverse traversal chooses the original tail from that record. No reverse weight is inferred from its opposite edge. All duplicate/parallel edges, self-loops, isolated nodes and zero weights are retained.
 
-## Build and run
+The second pass reparses the input directly into these arrays. No full temporary edge-triple array, sorting or routing index is built. The public full graph's measured payload is 55,530,828 bytes. Putting common edges beside metadata removes a separate offset lookup; the timing improvement was measured, while hardware cache-miss counters were unavailable.
 
-The Dockerfile uses the allowlisted, digest-pinned GCC 16 and Debian 13 images. Compilation is offline and statically links the C++ standard library and libc. The runtime runs as uid/gid 65534, needs no writable scratch, and performs no network operations. No source outside this folder is needed. The unchanged starter Python files are retained for provenance and are not copied into the runtime image.
+## Shortest paths and scratch memory
 
-From the repository root, a local build with the same flags is:
+Queries use bidirectional Dijkstra over the directed forward/reverse representations. Each step expands the smaller priority queue, alternating ties. A meeting supplies an upper bound; termination requires the sum of both queue minima to reach that bound. Stale entries are skipped. Nonnegative and zero weights are supported.
+
+Each worker owns two reusable binary radix heaps and a chained hash directory with contiguous state/link arrays. One record holds both directions' distances for a visited node. Node indices keep links valid when vectors grow. Only the fixed 256 KiB directory is cleared between queries; arena capacities survive and active state grows with visited nodes rather than allocating a graph-sized array per worker. No node-by-node heap allocation is needed.
+
+The compact state packs a 21-bit node id and two 21-bit distances in eight bytes. The all-ones distance is reserved, so it returns an answer only below 2,097,151. Every prefix of a shorter nonnegative path is also below that limit; consequently returned answers are exact. Other queries, including unreachable ones, are rerun with full uint64 distance state after the compact worker arenas are destroyed. The fallback's bound is `2^53`: for the accepted `n <= 2^21`, every possible simple path sum `(n-1)*UINT32_MAX` is strictly smaller. Addition widens before adding the edge weight.
+
+An atomic work counter distributes queries; separate answer slots preserve input order. Defaults are six build workers and six query workers, matching the target's physical P-cores. `D_BUILD` and `D_THREADS` allow 1–12 workers for controlled experiments. The local CPU has only four P-cores, so the optimal target setting still needs a board comparison.
+
+## Build, verification and dependencies
+
+The unchanged Dockerfile compiles a static executable offline using allowlisted, digest-pinned GCC 16, then copies only the executable into the allowlisted Debian 13 runtime. It runs as uid/gid 65534, uses no network or scratch files, and needs no source outside this folder. The untouched Python starter files are byte-identical published copies and are not runtime entrypoints. Declared non-stdlib runtime dependency count remains zero (`D=1`). The repository MIT licence applies.
+
+From the repository root:
 
 ```sh
 g++ -std=c++20 -O3 -march=x86-64-v3 -mtune=alderlake -pthread -static -s track-d/main.cpp -o /tmp/traverse
-/tmp/traverse /absolute/path/to/data /absolute/path/to/existing-output-directory
+/tmp/traverse /absolute/data/directory /absolute/existing/output/directory
+python3 check.py d --data /absolute/full-seed1 --expected a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e
 ```
 
-With Docker access, use the starter's exact sandbox check:
+Release and ASan/UBSan checks pass the official hand-written examples, independent random all-pairs comparisons, counter/weight/radix boundary tests, tiny seeds 1/2/7/42 and sample seeds 1/2/7. Repeated full public runs match the published SHA-256. Leak detection was disabled because LeakSanitizer cannot operate under the development sandbox's tracing restrictions.
 
-```sh
-python3 check.py d --data /absolute/path/to/full-seed1 --expected a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e
-```
+The frozen allowlist checker passes. Actual `check.py` Docker execution remains unverified: the development session cannot access `/var/run/docker.sock`. Official cgroup `memory.peak`, formatted scc S, K and the new board run ID remain pending. Experimental sources, the full original snapshot, raw logs and the verifier are preserved in `benchmarks/track-d-v2/`, outside the scored folder.
 
-See [PERF.md](PERF.md) and [measurements.json](measurements.json) for local measurements, correctness evidence and pending official validation. The actual Docker build/run and official S, M and K have not been measured: the development session cannot access the Docker socket. Set the actual team name in `.speed-demon.toml` before submission; its starter placeholder is unchanged.
+## Remaining opportunities
 
-## Dependencies and another 24 hours
-
-No third-party runtime or build libraries. GCC, libc, the C++ standard library and threads are supplied by the allowlisted toolchain; declared runtime dependency count is zero (`D = 1`). The existing repository MIT licence applies.
-
-Next, compare 4/6 workers on the scoring machine, obtain board run IDs, and measure parsing versus CSR scatter there. A small amount of build-time PGO may improve the parser/search loops, but it was not tested. Heavy routing indexes and node reorderings would need to repay their preprocessing and source costs inside the same run; the measured reorderings here did not.
+First obtain a new official run and compare 6/12 query workers on the six-P-core machine. Query processing and graph scatter remain the largest measured costs. GCC 15 was unavailable locally; native/LTO and PGO experiments did not provide a reliable K win here. The 150–200 ms official target has not been established. Preserve the current measured candidate while testing further target-specific changes.
