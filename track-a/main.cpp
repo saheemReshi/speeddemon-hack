@@ -1,207 +1,343 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <condition_variable>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <fcntl.h>
-#include <functional>
+#include <memory>
+#include <mutex>
+#include <nmmintrin.h>
 #include <string>
 #include <string_view>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <thread>
 #include <unistd.h>
-#include <unordered_map>
-#include <utility>
 #include <vector>
+#ifndef WORKERS
+#define WORKERS 6
+#endif
 
+constexpr unsigned Hours = 72, Endpoints = 1842, Groups = Hours * Endpoints;
+static unsigned local_group(unsigned endpoint, unsigned hour) {
+  return endpoint * Hours + hour;
+}
+
+static size_t hash_endpoint(std::string_view key) {
+  uint64_t hash = key.size();
+  const char *p = key.data();
+  size_t n = key.size();
+  while (n >= 8) {
+    uint64_t word;
+    memcpy(&word, p, 8);
+    hash = _mm_crc32_u64(hash, word);
+    p += 8;
+    n -= 8;
+  }
+  while (n--)
+    hash = _mm_crc32_u8(hash, *p++);
+  return hash;
+}
+
+struct Dictionary {
+  // The spec caps the catalogue at 1,842 keys. Collisions still compare bytes.
+  std::array<uint16_t, 4096> slots{};
+  std::vector<std::string_view> keys;
+  Dictionary() { keys.reserve(Endpoints); }
+  unsigned find(std::string_view key) { return find(key, hash_endpoint(key)); }
+  unsigned find(std::string_view key, size_t hash) {
+    unsigned slot = hash & (slots.size() - 1);
+    while (slots[slot]) {
+      const unsigned id = slots[slot] - 1;
+      if (keys[id] == key)
+        return id;
+      slot = (slot + 1) & (slots.size() - 1);
+    }
+    const unsigned id = keys.size();
+    keys.push_back(key);
+    slots[slot] = id + 1;
+    return id;
+  }
+};
+
+static const char *scan_endpoint(const char *p, const char *end,
+                                 uint64_t &hash) {
+  while (end - p >= 8) {
+    uint64_t word;
+    memcpy(&word, p, 8);
+    // Detect the first space using the standard zero-byte word test.
+    const uint64_t spaces = word ^ 0x2020202020202020ULL;
+    const uint64_t mask =
+        (spaces - 0x0101010101010101ULL) & ~spaces & 0x8080808080808080ULL;
+    if (mask) {
+      const unsigned n = __builtin_ctzll(mask) / 8;
+      word &= n ? (uint64_t(1) << (n * 8)) - 1 : 0;
+      hash = _mm_crc32_u64(hash, word);
+      return p + n;
+    }
+    hash = _mm_crc32_u64(hash, word);
+    p += 8;
+  }
+  uint64_t word = 0;
+  unsigned n = 0;
+  while (*p != ' ')
+    word |= uint64_t(uint8_t(*p++)) << (8 * n++);
+  hash = _mm_crc32_u64(hash, word);
+  return p;
+}
+
+struct Worker {
+  Dictionary dictionary;
+  std::unique_ptr<uint64_t[]> stats;
+  std::unique_ptr<uint32_t[]> cursors;
+};
 struct Group {
-  std::vector<uint32_t> latencies;
-  const char *hour_text;
-  uint32_t endpoint_id;
-  uint32_t errors = 0;
-  uint8_t hour;
+  uint32_t begin = 0, count = 0, errors = 0;
 };
 
-struct Aggregates {
-  std::unordered_map<std::string_view, uint32_t> endpoint_ids;
-  std::vector<std::string_view> endpoints;
-  std::vector<std::array<int32_t, 72>> group_ids;
-  std::vector<Group> groups;
-
-  Aggregates() { endpoint_ids.reserve(2048); }
-
-  uint32_t endpoint_id(std::string_view endpoint) {
-    auto [it, inserted] = endpoint_ids.try_emplace(endpoint, endpoints.size());
-    if (inserted) {
-      endpoints.push_back(endpoint);
-      group_ids.emplace_back();
-      group_ids.back().fill(-1);
-    }
-    return it->second;
-  }
-
-  Group &group(uint32_t endpoint, uint8_t hour, const char *text) {
-    int32_t &id = group_ids[endpoint][hour];
-    if (id == -1) {
-      id = groups.size();
-      groups.push_back({{}, text, endpoint, 0, hour});
-    }
-    return groups[id];
-  }
-};
-
-static void parse(const char *p, const char *end, Aggregates &result) {
+template <bool Count>
+static void parse(const char *p, const char *end, Worker &worker,
+                  uint32_t *values) {
   while (p < end) {
-    const char *hour_text = p;
-    const int month = (p[5] - '0') * 10 + p[6] - '0';
-    const int day = (p[8] - '0') * 10 + p[9] - '0';
-    const int hour_of_day = (p[11] - '0') * 10 + p[12] - '0';
-    // The frozen spec fixes the span to Oct 30 18:00 through Nov 2 17:59 UTC.
-    const int hour = (month == 10 ? day - 30 : day + 1) * 24 + hour_of_day - 18;
+    const unsigned month = (p[5] - '0') * 10 + p[6] - '0';
+    const unsigned day = (p[8] - '0') * 10 + p[9] - '0';
+    const unsigned hour = (month == 10 ? day - 30 : day + 1) * 24 +
+                          (p[11] - '0') * 10 + p[12] - '0' - 18;
     p += 28;
-    while (*p != ' ')
-      ++p; // Method is ignored.
-    const char *endpoint_start = ++p;
-    while (*p != ' ')
+    switch (*p) {
+    case 'G':
+      p += 4;
+      break;
+    case 'H':
+      p += 5;
+      break;
+    case 'D':
+      p += 7;
+      break;
+    case 'O':
+      p += 8;
+      break;
+    default:
+      p += p[1] == 'U' ? 4 : p[1] == 'O' ? 5 : 6;
+    }
+    uint64_t hash = 0;
+    const char *endpoint_end = scan_endpoint(p, end, hash);
+    hash ^= size_t(endpoint_end - p) * 0x9e3779b1ULL;
+    const unsigned endpoint =
+        worker.dictionary.find({p, size_t(endpoint_end - p)}, hash);
+    const unsigned group = local_group(endpoint, hour);
+    if constexpr (Count) {
+      // Low 32 bits count requests, high 32 bits count errors; 3.1M cannot
+      // carry.
+      worker.stats[group] += 1 + (uint64_t(endpoint_end[1] == '5') << 32);
+      p = static_cast<const char *>(
+              memchr(endpoint_end + 5, '\n', end - endpoint_end - 5)) +
+          1;
+    } else {
+      p = endpoint_end + 5;
+      uint32_t value = 0;
+      if (end - p >= 8) {
+        uint64_t word;
+        memcpy(&word, p, 8);
+        const uint64_t lf = word ^ 0x0a0a0a0a0a0a0a0aULL;
+        const uint64_t mask =
+            (lf - 0x0101010101010101ULL) & ~lf & 0x8080808080808080ULL;
+        const unsigned n = mask ? __builtin_ctzll(mask) / 8 : 8;
+        if (n < 8)
+          word = (word << ((8 - n) * 8)) | (0x3030303030303030ULL >> (n * 8));
+        // Combine digits into pairs, then quads, then one value.
+        word -= 0x3030303030303030ULL;
+        word = (word * 10 + (word >> 8)) & 0x00ff00ff00ff00ffULL;
+        word = (word * 100 + (word >> 16)) & 0x0000ffff0000ffffULL;
+        value = (word * 10000 + (word >> 32)) & 0xffffffffULL;
+        p += n;
+      }
+      while (*p != '\n')
+        value = value * 10 + (*p++ - '0');
       ++p;
-    const std::string_view endpoint(endpoint_start, p - endpoint_start);
-    ++p;
-    const bool error = *p == '5';
-    p += 4;
-    uint32_t latency = 0;
-    while (*p != '\n')
-      latency = latency * 10 + static_cast<uint32_t>(*p++ - '0');
-    ++p;
-    Group &group = result.group(result.endpoint_id(endpoint), hour, hour_text);
-    group.latencies.push_back(latency);
-    group.errors += error;
+      values[worker.cursors[group]++] = value;
+    }
   }
 }
 
-static void append_number(std::string &out, uint64_t value) {
-  char digits[24];
-  auto end = std::to_chars(digits, digits + sizeof(digits), value).ptr;
-  out.append(digits, end);
+static void append_number(std::string &text, uint64_t value) {
+  char buffer[24];
+  text.append(buffer,
+              std::to_chars(buffer, buffer + sizeof(buffer), value).ptr);
 }
 
 int main(int argc, char **argv) {
   if (argc != 1 && argc != 3)
     return 2;
-  const char *input_path = argc == 3 ? argv[1] : "/data/requests.log";
-  const char *output_path = argc == 3 ? argv[2] : "/out/summary.txt";
-  int fd = open(input_path, O_RDONLY);
+  const int fd = open(argc == 3 ? argv[1] : "/data/requests.log", O_RDONLY);
   if (fd < 0)
     return 1;
   struct stat st;
-  if (fstat(fd, &st) != 0)
+  if (fstat(fd, &st))
     return 1;
-  const size_t size = static_cast<size_t>(st.st_size);
+  const size_t size = st.st_size;
   const char *data = size ? static_cast<const char *>(mmap(
                                 nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0))
                           : nullptr;
   close(fd);
   if (size && data == MAP_FAILED)
     return 1;
+  FILE *output = fopen(argc == 3 ? argv[2] : "/out/summary.txt", "wb");
+  if (!output)
+    return 1;
+  if (!size)
+    return fclose(output) ? 1 : 0;
 
-  // Workers own all mutable state; only the read-only mapping is shared.
-  const unsigned workers = size >= (8 << 20) ? 6 : 1;
-  std::vector<Aggregates> partial(workers);
-  std::vector<const char *> boundaries(workers + 1, data);
-  if (size)
-    boundaries.back() = data + size;
+  const unsigned workers = size >= (8 << 20) ? WORKERS : 1;
+  std::vector<Worker> partial(workers);
+  std::vector<const char *> boundary(workers + 1, data);
+  boundary.back() = data + size;
   for (unsigned i = 1; i < workers; ++i) {
     const char *p = data + size * i / workers;
     while (p < data + size && p[-1] != '\n')
       ++p;
-    boundaries[i] = p;
+    boundary[i] = p;
   }
-  std::vector<std::thread> threads;
-  for (unsigned i = 1; i < workers; ++i)
-    threads.emplace_back(parse, boundaries[i], boundaries[i + 1],
-                         std::ref(partial[i]));
-  parse(boundaries[0], boundaries[1], partial[0]);
-  for (auto &thread : threads)
-    thread.join();
-  Aggregates &total = partial[0];
-  for (unsigned i = 1; i < workers; ++i) {
-    for (Group &source : partial[i].groups) {
-      const auto endpoint =
-          total.endpoint_id(partial[i].endpoints[source.endpoint_id]);
-      Group &target = total.group(endpoint, source.hour, source.hour_text);
-      if (target.latencies.empty())
-        target.latencies = std::move(source.latencies);
-      else
-        target.latencies.insert(target.latencies.end(),
-                                source.latencies.begin(),
-                                source.latencies.end());
-      target.errors += source.errors;
+  auto parallel = [&](auto action) {
+    std::vector<std::thread> threads;
+    for (unsigned i = 1; i < workers; ++i)
+      threads.emplace_back(action, i);
+    action(0);
+    for (auto &thread : threads)
+      thread.join();
+  };
+  parallel([&](unsigned i) {
+    partial[i].stats = std::make_unique<uint64_t[]>(Groups);
+    parse<true>(boundary[i], boundary[i + 1], partial[i], nullptr);
+  });
+  Dictionary dictionary;
+  std::vector<Group> groups(Groups);
+  std::vector<std::vector<unsigned>> translations(workers);
+  for (unsigned i = 0; i < workers; ++i) {
+    auto &worker = partial[i];
+    for (unsigned id = 0; id < worker.dictionary.keys.size(); ++id) {
+      const unsigned global = dictionary.find(worker.dictionary.keys[id]);
+      translations[i].push_back(global);
+      for (unsigned h = 0; h < Hours; ++h) {
+        const uint64_t stats = worker.stats[local_group(id, h)];
+        auto &group = groups[h * Endpoints + global];
+        group.count += uint32_t(stats);
+        group.errors += stats >> 32;
+      }
     }
   }
-  std::vector<uint32_t> order(total.endpoints.size());
-  for (uint32_t i = 0; i < order.size(); ++i)
-    order[i] = i;
-  std::sort(order.begin(), order.end(), [&](uint32_t a, uint32_t b) {
-    return total.endpoints[a] < total.endpoints[b];
+  uint32_t total = 0;
+  std::vector<uint32_t> next(Groups);
+  for (unsigned g = 0; g < Groups; ++g) {
+    groups[g].begin = next[g] = total;
+    total += groups[g].count;
+  }
+  for (unsigned i = 0; i < workers; ++i) {
+    auto &worker = partial[i];
+    worker.cursors = std::make_unique<uint32_t[]>(Groups);
+    // Prefix sums give workers disjoint slices, even for shuffled input.
+    for (unsigned id = 0; id < worker.dictionary.keys.size(); ++id) {
+      for (unsigned h = 0; h < Hours; ++h) {
+        const unsigned local = local_group(id, h);
+        auto &cursor = next[h * Endpoints + translations[i][id]];
+        worker.cursors[local] = cursor;
+        cursor += uint32_t(worker.stats[local]);
+      }
+    }
+    worker.stats.reset();
+  }
+  next.clear();
+  next.shrink_to_fit();
+  const size_t latency_bytes = size_t(total) * sizeof(uint32_t);
+  auto *values = static_cast<uint32_t *>(
+      mmap(nullptr, latency_bytes, PROT_READ | PROT_WRITE,
+           MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+  if (values == MAP_FAILED)
+    return 1;
+  parallel([&](unsigned i) {
+    parse<false>(boundary[i], boundary[i + 1], partial[i], values);
   });
+  for (auto &worker : partial)
+    worker.cursors.reset();
 
-  std::array<std::string, 72> output_hours;
-  auto render = [&](unsigned worker) {
-    for (unsigned hour = worker; hour < 72; hour += workers) {
-      auto &buffer = output_hours[hour];
-      buffer.reserve(std::min<size_t>(160 << 10, size / 72));
-      for (uint32_t endpoint : order) {
-        const int32_t id = total.group_ids[endpoint][hour];
-        if (id == -1)
+  std::vector<unsigned> order(dictionary.keys.size());
+  for (unsigned i = 0; i < order.size(); ++i)
+    order[i] = i;
+  std::sort(order.begin(), order.end(), [&](unsigned a, unsigned b) {
+    return dictionary.keys[a] < dictionary.keys[b];
+  });
+  std::array<std::array<char, 21>, Hours> hours{};
+  for (unsigned h = 0; h < Hours; ++h) {
+    unsigned day = (h + 18) / 24 + 30;
+    snprintf(hours[h].data(), hours[h].size(), "2026-%02u-%02uT%02u:00:00Z",
+             day < 32 ? 10 : 11, day < 32 ? day : day - 31, (h + 18) % 24);
+  }
+  const size_t page = sysconf(_SC_PAGESIZE);
+  std::mutex mutex;
+  std::condition_variable ready;
+  unsigned turn = 0;
+  bool success = true;
+  parallel([&](unsigned worker) {
+    std::string buffer;
+    buffer.reserve(std::min<size_t>(160 << 10, size / Hours));
+    for (unsigned h = worker; h < Hours; h += workers) {
+      buffer.clear();
+      for (unsigned endpoint : order) {
+        const auto &group = groups[h * Endpoints + endpoint];
+        const uint64_t n = group.count;
+        if (!n)
           continue;
-        Group &group = total.groups[id];
-        auto &values = group.latencies;
-        const uint64_t count = values.size();
-        if (count < 64)
-          std::sort(values.begin(), values.end());
+        auto *first = values + group.begin, *end = first + n;
+        if (n < 64)
+          std::sort(first, end);
         else {
-          // Each selected rank partitions the remaining higher ranks.
-          auto first = values.begin();
+          auto *begin = first;
           for (uint64_t pct : {50, 95, 99}) {
-            auto rank = values.begin() + (pct * count + 99) / 100 - 1;
-            std::nth_element(first, rank, values.end());
-            first = rank + 1;
+            auto *rank = first + (pct * n + 99) / 100 - 1;
+            std::nth_element(begin, rank, end);
+            begin = rank + 1;
           }
         }
-        buffer.append(group.hour_text, 13);
-        buffer += ":00:00Z ";
-        buffer.append(total.endpoints[group.endpoint_id]);
+        buffer.append(hours[h].data(), 20);
         buffer += ' ';
-        append_number(buffer, count);
+        buffer.append(dictionary.keys[endpoint]);
+        buffer += ' ';
+        append_number(buffer, n);
         for (uint64_t pct : {50, 95, 99}) {
           buffer += ' ';
-          append_number(buffer, values[(pct * count + 99) / 100 - 1]);
+          append_number(buffer, first[(pct * n + 99) / 100 - 1]);
         }
         buffer += ' ';
         append_number(buffer, group.errors);
         buffer += ' ';
-        append_number(buffer,
-                      static_cast<uint64_t>(group.errors) * 1000000 / count);
+        append_number(buffer, uint64_t(group.errors) * 1000000 / n);
         buffer += '\n';
       }
+      // Discard only whole pages owned entirely by this completed hour.
+      const size_t start =
+          (size_t(groups[h * Endpoints].begin) * 4 + page - 1) / page * page;
+      const size_t stop =
+          h + 1 < Hours
+              ? size_t(groups[(h + 1) * Endpoints].begin) * 4 / page * page
+              : latency_bytes / page * page;
+      if (stop > start)
+        madvise(reinterpret_cast<char *>(values) + start, stop - start,
+                MADV_DONTNEED);
+      std::unique_lock lock(mutex);
+      // Keep one live hour buffer per worker; serialize only the file writes.
+      ready.wait(lock, [&] { return turn == h; });
+      if (fwrite(buffer.data(), 1, buffer.size(), output) != buffer.size())
+        success = false;
+      ++turn;
+      lock.unlock();
+      ready.notify_all();
     }
-  };
-  threads.clear();
-  for (unsigned i = 1; i < workers; ++i)
-    threads.emplace_back(render, i);
-  render(0);
-  for (auto &thread : threads)
-    thread.join();
-  FILE *output = fopen(output_path, "wb");
-  if (!output)
-    return 1;
-  for (const auto &buffer : output_hours) {
-    if (fwrite(buffer.data(), 1, buffer.size(), output) != buffer.size())
-      return 1;
-  }
-  if (fclose(output) != 0)
-    return 1;
-  if (size)
-    munmap(const_cast<char *>(data), size);
-  return 0;
+  });
+  if (fclose(output))
+    success = false;
+  munmap(values, latency_bytes);
+  munmap(const_cast<char *>(data), size);
+  return success ? 0 : 1;
 }
