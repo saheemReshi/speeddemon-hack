@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <immintrin.h>
+#include <span>
 #include <string>
 #include <string_view>
 #include <sys/mman.h>
@@ -24,7 +25,7 @@ using U64 = uint64_t;
 using Clock = std::chrono::steady_clock;
 
 struct Mapping {
-  const char *data = nullptr;
+  const char *data = "";
   size_t size = 0;
   explicit Mapping(const std::string &path) {
     int fd = open(path.c_str(), O_RDONLY);
@@ -130,7 +131,6 @@ template <class F> void tokenize(const char *p, const char *end, F &&f) {
 }
 
 struct Term {
-  Key k;
   std::string_view text;
   U32 usage = 0, sample = 0;
   bool boolean = false;
@@ -175,7 +175,8 @@ struct Dictionary {
         if (s.id)
           insert(s.id - 1);
     }
-    const auto &k = terms[id].k;
+    const auto &text = terms[id].text;
+    auto k = key(text.data(), text.size(), text.data() + text.size());
     size_t i = hashkey(k) & (slots.size() - 1);
     while (slots[i].id)
       i = (i + 1) & (slots.size() - 1);
@@ -187,9 +188,9 @@ struct Dictionary {
 struct Query {
   std::array<U32, 8> terms{};
   std::array<char, 7> ops{};
-  U32 length = 0, anchor = 0;
-  int next = -1;
+  uint8_t length = 0, anchor = 0;
   bool phrase = false;
+  int next = -1;
 };
 
 struct Result {
@@ -217,46 +218,72 @@ U32 docid(const char *p) {
   return n;
 }
 
-bool equalword(const char *s, const char *e, std::string_view t) {
-  if (size_t(e - s) != t.size())
-    return false;
-  for (size_t i = 0; i < t.size(); ++i)
-    if (lower(static_cast<unsigned char>(s[i])) != unsigned(t[i]))
-      return false;
-  return true;
-}
-
-bool verify(const Query &q, const std::vector<Term> &terms, const char *s,
-            U32 n, const char *begin, const char *end) {
-  const char *p = s;
-  for (int j = int(q.anchor) - 1; j >= 0; --j) {
-    while (p > begin && !tokenchar(p[-1]))
-      --p;
-    const char *e = p;
-    while (p > begin && tokenchar(p[-1]))
-      --p;
-    if (!equalword(p, e, terms[q.terms[j]].text))
-      return false;
+// Inline lists avoid arena traffic for one or two documents. Larger sorted
+// lists live in a worker-owned arena; the descriptor remains eight bytes.
+struct Posting {
+  std::array<PID, 2> address{};
+  U32 count = 0;
+  U32 offset() const { return std::bit_cast<U32>(address); }
+  void offset(U32 value) { address = std::bit_cast<std::array<PID, 2>>(value); }
+};
+// Reserve address space, commit only touched pages. Free lists recycle blocks
+// by capacity; no locks or individual heap allocations are needed.
+struct Arena {
+  static constexpr size_t bytes = size_t(1) << 30;
+  PID *data = nullptr;
+  U32 used = 2;
+  std::array<U32, 30> free{};
+  void init() {
+    data = static_cast<PID *>(mmap(nullptr, bytes, PROT_READ | PROT_WRITE,
+                                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
+                                   -1, 0));
+    if (data == MAP_FAILED)
+      std::exit(1);
   }
-  p = s + n;
-  for (U32 j = q.anchor + 1; j < q.length; ++j) {
-    while (p < end && !tokenchar(*p))
-      ++p;
-    const char *b = p;
-    while (p < end && tokenchar(*p))
-      ++p;
-    if (!equalword(b, p, terms[q.terms[j]].text))
-      return false;
+  U32 allocate(U32 capacity) {
+    U32 c = std::countr_zero(capacity), p = free[c];
+    if (p)
+      memcpy(&free[c], data + p, 4);
+    else {
+      p = used;
+      used += capacity;
+      if (size_t(used) * sizeof(PID) > bytes)
+        std::exit(1);
+    }
+    return p;
   }
-  return true;
-}
+  void push(Posting &p, PID d) {
+    if (p.count < 2) {
+      p.address[p.count++] = d;
+      return;
+    }
+    if (p.count == 2) {
+      U32 offset = allocate(4);
+      memcpy(data + offset, p.address.data(), 4);
+      p.offset(offset);
+    } else if (std::has_single_bit(p.count)) {
+      U32 old = p.offset(), c = std::countr_zero(p.count);
+      p.offset(allocate(p.count * 2));
+      memcpy(data + p.offset(), data + old, size_t(p.count) * sizeof(PID));
+      memcpy(data + old, &free[c], 4);
+      free[c] = old;
+    }
+    data[p.offset() + p.count++] = d;
+  }
+};
 
-// Local IDs fit in 16 bits; bases and bitmap boundaries are multiples of 64.
+// Partitions contain at most 65,472 documents. UINT16_MAX is reserved for
+// unseen stamps; bitmap boundaries and bases are multiples of 64.
 struct Partition {
   const char *begin = nullptr, *end = nullptr;
   U32 base = 0, limit = 0;
   size_t words = 0;
-  std::vector<std::vector<PID>> lists;
+  std::vector<Posting> lists;
+  Arena arena;
+  std::span<const PID> list(int id) const {
+    const auto &p = lists[id];
+    return {p.count <= 2 ? p.address.data() : arena.data + p.offset(), p.count};
+  }
   std::vector<U64> bits;
   std::vector<std::pair<U32, U32>> phrase_hits;
   const U64 *bitmap(int id) const { return bits.data() + size_t(id) * words; }
@@ -267,7 +294,7 @@ inline bool contains(const U64 *bits, U32 d) {
   return bits[d / 64] & (U64(1) << (d % 64));
 }
 
-void sparse_op(const std::vector<PID> &a, const std::vector<PID> &b, char op,
+void sparse_op(std::span<const PID> a, std::span<const PID> b, char op,
                std::vector<PID> &r) {
   r.clear();
   if (op == 'O') {
@@ -304,14 +331,16 @@ Result boolean(const Query &q, const std::vector<Term> &terms,
   if (dense) {
     const U64 *v = p.bitmap(terms[q.terms[0]].bitmap);
     s.bits.assign(v, v + p.words);
-  } else
-    s.a = p.lists[terms[q.terms[0]].posting];
+  } else {
+    auto list = p.list(terms[q.terms[0]].posting);
+    s.a.assign(list.begin(), list.end());
+  }
   for (U32 i = 1; i < q.length; ++i) {
     U32 t = q.terms[i];
     char op = q.ops[i - 1];
     int bi = terms[t].bitmap;
-    static const std::vector<PID> empty;
-    const auto &list = bi < 0 ? p.lists[terms[t].posting] : empty;
+    const auto list =
+        bi < 0 ? p.list(terms[t].posting) : std::span<const PID>{};
     if (!dense && bi < 0) {
       sparse_op(s.a, list, op, s.b);
       s.a.swap(s.b);
@@ -408,6 +437,8 @@ int main(int argc, char **argv) {
   terms.reserve(queryfile.size / 10);
   Dictionary dict(terms, queryfile.size / 16 + 16);
   std::vector<Query> queries;
+  queries.reserve(
+      std::count(queryfile.data, queryfile.data + queryfile.size, '\n'));
   const char *p = queryfile.data, *qe = p + queryfile.size;
   while (p < qe) {
     Query q;
@@ -422,7 +453,6 @@ int main(int argc, char **argv) {
       if (!t) {
         t = terms.size() + 1;
         Term term;
-        term.k = k;
         term.text = std::string_view(s, p - s);
         terms.push_back(std::move(term));
         dict.insert(t - 1);
@@ -493,14 +523,15 @@ int main(int argc, char **argv) {
   std::fill(dict.slots.begin(), dict.slots.end(), Dictionary::Slot{});
   dict.count = 0;
   for (U32 t = 0; t < terms.size(); ++t)
-    if (terms[t].boolean || terms[t].head >= 0)
-      dict.insert(t);
+    dict.insert(t);
   struct Hot {
     int bitmap, head, posting;
   };
   std::vector<Hot> hot;
+  hot.reserve(terms.size());
   for (auto &t : terms)
     hot.push_back({t.bitmap, t.head, t.posting});
+  std::vector<U32>().swap(seen);
   auto planned = Clock::now();
   U32 workers = 12;
   if (const char *v = std::getenv("B_THREADS"))
@@ -515,7 +546,7 @@ int main(int argc, char **argv) {
       --last;
     ndocs = docid(last) + 1;
   }
-  U32 partcount = std::max<U32>(workers, (ndocs + 65535) / 65536);
+  U32 partcount = std::max<U32>(workers, (ndocs + 65471) / 65472);
   U32 chunk =
       std::max<U32>(64, ((ndocs + partcount * 64 - 1) / (partcount * 64)) * 64);
   partcount = std::max<U32>(1, (ndocs + chunk - 1) / chunk);
@@ -553,39 +584,81 @@ int main(int argc, char **argv) {
       part.limit = part.end == end ? ndocs : docid(part.end);
       part.words = (part.limit - part.base + 63) / 64;
       part.lists.resize(postings);
+      part.arena.init();
       part.bits.resize(size_t(bitmaps) * part.words);
-      std::vector<U32> last(terms.size(), UINT32_MAX),
-          matched(queries.size(), UINT32_MAX);
+      std::vector<PID> last(terms.size(), UINT16_MAX),
+          matched(queries.size(), UINT16_MAX);
+      // Stage independent lookups before consuming dependent posting metadata.
+      // The complete ID stream is retained only for the current document.
+      std::array<Key, 32> keys;
+      std::array<U32, 32> batch_ids;
+      std::vector<U32> ids;
+      ids.reserve(2048);
+      std::vector<std::pair<U32, int>> anchors;
       const char *s = part.begin;
       U32 d = part.base;
       while (s < part.end) {
         while (*s != '\t')
           ++s;
-        const char *begin = ++s;
+        ++s;
         const char *finish =
             static_cast<const char *>(memchr(s, '\n', part.end - s));
-        tokenize(s, finish, [&](const char *t, U32 n) {
-          U32 id = dict.find(key(t, n, end));
-          if (!id)
-            return;
-          --id;
-          const auto &term = hot[id];
-          if ((term.bitmap >= 0 || term.posting >= 0) && last[id] != d) {
-            last[id] = d;
-            if (term.bitmap >= 0)
-              part.bitmap(term.bitmap)[(d - part.base) / 64] |=
-                  U64(1) << ((d - part.base) % 64);
-            else
-              part.lists[term.posting].push_back(PID(d - part.base));
+
+        ids.clear();
+        anchors.clear();
+        U32 batch_count = 0;
+        auto flush = [&]() {
+          for (U32 i = 0; i < batch_count; ++i) {
+            U32 id = dict.find(keys[i]);
+            batch_ids[i] = id ? id - 1 : UINT32_MAX;
+            if (id) {
+              __builtin_prefetch(&hot[id - 1], 0, 3);
+              __builtin_prefetch(&last[id - 1], 1, 3);
+            }
           }
-          for (int qi = term.head; qi >= 0; qi = queries[qi].next) {
-            if (matched[qi] != d &&
-                verify(queries[qi], terms, t, n, begin, finish)) {
-              matched[qi] = d;
+          for (U32 i = 0; i < batch_count; ++i) {
+            U32 id = batch_ids[i];
+            U32 position = ids.size();
+            ids.push_back(id);
+            if (id == UINT32_MAX)
+              continue;
+            const auto &term = hot[id];
+            if ((term.bitmap >= 0 || term.posting >= 0) &&
+                last[id] != d - part.base) {
+              last[id] = PID(d - part.base);
+              if (term.bitmap >= 0)
+                part.bitmap(term.bitmap)[(d - part.base) / 64] |=
+                    U64(1) << ((d - part.base) % 64);
+              else
+                part.arena.push(part.lists[term.posting], PID(d - part.base));
+            }
+            if (term.head >= 0)
+              anchors.emplace_back(position, term.head);
+          }
+          batch_count = 0;
+        };
+        tokenize(s, finish, [&](const char *t, U32 n) {
+          auto k = key(t, n, end);
+          keys[batch_count++] = k;
+          __builtin_prefetch(&dict.slots[hashkey(k) & (dict.slots.size() - 1)],
+                             0, 3);
+          if (batch_count == 32)
+            flush();
+        });
+        flush();
+        // Unknown tokens keep their own positions (UINT32_MAX), so adjacency
+        // cannot collapse across unindexed words or document boundaries.
+        for (auto [position, head] : anchors)
+          for (int qi = head; qi >= 0; qi = queries[qi].next) {
+            const auto &q = queries[qi];
+            if (matched[qi] != d - part.base && position >= q.anchor &&
+                position - q.anchor + q.length <= ids.size() &&
+                std::equal(q.terms.begin(), q.terms.begin() + q.length,
+                           ids.begin() + position - q.anchor)) {
+              matched[qi] = PID(d - part.base);
               part.phrase_hits.emplace_back(qi, d);
             }
           }
-        });
         s = finish + 1;
         ++d;
       }
@@ -628,21 +701,25 @@ int main(int argc, char **argv) {
   if (!file)
     return 1;
   if (std::getenv("B_PROFILE")) {
-    U64 pairs = 0;
+    U64 pairs = 0, arena_bytes = 0;
+    for (const auto &part : parts)
+      arena_bytes += size_t(part.arena.used) * sizeof(PID);
     for (auto &part : parts)
       for (auto &v : part.lists)
-        pairs += v.size();
+        pairs += v.count;
     auto ms = [](auto d) {
       return std::chrono::duration<double, std::milli>(d).count();
     };
     std::fprintf(
         stderr,
         "parse=%.3f plan=%.3f scan_phrase=%.3f boolean=%.3f output=%.3f "
-        "total=%.3f ms terms=%zu pairs=%llu bitmaps=%u workers=%u\n",
+        "total=%.3f ms terms=%zu pairs=%llu bitmaps=%u workers=%u "
+        "arena_bytes=%llu\n",
         ms(parsed - start), ms(planned - parsed), ms(indexed - planned),
         ms(queried - indexed), ms(Clock::now() - queried),
         ms(Clock::now() - start), terms.size(),
-        static_cast<unsigned long long>(pairs), bitmaps, workers);
+        static_cast<unsigned long long>(pairs), bitmaps, workers,
+        (unsigned long long)arena_bytes);
   }
   // Output is closed above. The kernel reclaims the index without allocator
   // teardown.

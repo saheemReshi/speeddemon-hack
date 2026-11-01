@@ -1,5 +1,23 @@
 # Track B performance and correctness checkpoint
 
+## Second optimization round (in progress)
+
+The user supplied an official board baseline of 383 ms / 99 MB, K=16.889,
+61.381 points and S=622. No run ID was supplied. The exact source is preserved in
+`../benchmarks/track-b-v2/board-baseline.cpp`; earlier measurements below describe
+the first round and must not be confused with this board baseline.
+
+A new native-validated checkpoint uses recyclable posting arenas, inline short
+lists, batched prefetched lookup and bounded per-document token IDs for phrases.
+Five interleaved full-seed1 runs measured 628.504 ms versus 846.143 ms for the
+preserved board source on this laptop, with peak total RSS 322132 versus 342492
+KiB. All 35 architecture-comparison runs matched the published full hash.
+Tiny, sample and full seeds 2/3 also passed (three runs each), plus 9600 random
+differential queries and the eight official hand-written methods. Container
+validation and a new official board measurement remain outstanding. This is not
+a claim of 75–120 ms on the scoring machine. Further experiments are in progress.
+Raw records and source alternatives are in `../benchmarks/track-b-v2/`.
+
 ## Status
 
 The final C++23 source is ready for review/commit. No commit, push or official

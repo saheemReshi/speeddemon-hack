@@ -57,7 +57,17 @@ struct Parser {
       n = n * 10 + (*p++ - '0');
     return n;
   }
-  const char *quote() const {
+  const char *quote() {
+#ifdef CSV_AVX_SEARCH
+    if (end - p >= 32) {
+      auto block = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(p));
+      unsigned mask = _mm256_movemask_epi8(
+          _mm256_cmpeq_epi8(block, _mm256_set1_epi8('"')));
+      if (mask)
+        return p + __builtin_ctz(mask);
+      return static_cast<const char *>(memchr(p + 32, '"', end - p - 32));
+    }
+#endif
     if (end - p >= 16) {
       auto block = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
       unsigned mask =
@@ -85,15 +95,11 @@ struct Parser {
     size_t length = 0;
     for (;;) {
       auto q = quote();
-      if (!q)
-        throw std::runtime_error("unterminated quoted field");
       length += q - p;
-      if (q + 1 == end || q[1] != '"') {
+      if (q[1] != '"') {
         if (value)
           *value = std::string_view(start, q - start);
         p = q + 1;
-        if (p == end || *p != ',')
-          throw std::runtime_error("missing comma");
         ++p;
         return length;
       }
@@ -124,14 +130,23 @@ struct Regions {
   uint8_t get(uint64_t id) const { return id < values.size() ? values[id] : 0; }
 };
 
+#ifndef NAME_CAPACITY
+#define NAME_CAPACITY 131072
+#endif
 class Names {
+  static constexpr size_t capacity = NAME_CAPACITY;
+  static_assert(capacity && (capacity & (capacity - 1)) == 0);
   struct Slot {
-    std::atomic<uintptr_t> key{0};
-    std::array<std::atomic<uint64_t>, 4> countries{};
+    // 0 is empty, 1 reserves a slot, otherwise hash and encoded length.
+    // Release publication makes the copied prefix and pointer immutable.
+    std::atomic<uint64_t> state{0};
+    union {
+      const char *key;
+      char prefix[16];
+    };
   };
-  size_t capacity;
   std::unique_ptr<Slot[]> slots;
-  const char *end;
+  std::unique_ptr<std::atomic<uint64_t>[]> country_bits;
   struct Hash {
     using is_transparent = void;
     size_t operator()(std::string_view s) const {
@@ -154,7 +169,7 @@ class Names {
       uint64_t first, last;
       memcpy(&first, p, 8);
       memcpy(&last, p + n - 8, 8);
-      return _mm_crc32_u64(_mm_crc32_u64(hash, first), last);
+      return _mm_crc32_u64(first, last) ^ (uint32_t(n) * 0x9e3779b9);
     }
     if (n & 4) {
       uint32_t word;
@@ -173,17 +188,12 @@ class Names {
     return hash;
   }
 
-  bool equal(uintptr_t key, std::string_view name) const {
-    const char *raw = reinterpret_cast<const char *>(key);
-    bool quoted = *raw == '"';
-    raw += quoted;
-    size_t available = end - raw;
-    if (available < name.size() || available - name.size() < (quoted ? 2u : 1u))
-      return false;
-    const char *tail = raw + name.size();
-    bool boundary = quoted ? tail[0] == '"' && tail[1] == ',' : tail[0] == ',';
-    if (!boundary)
-      return false;
+  bool equal(const Slot &slot, std::string_view name) const {
+    const char *raw;
+    if (name.size() <= 16)
+      raw = slot.prefix;
+    else
+      raw = slot.key;
     size_t n = name.size();
     const char *value = name.data();
     if (n >= 8 && n <= 16) {
@@ -216,30 +226,48 @@ class Names {
   }
 
 public:
-#ifndef NAME_CAPACITY
-#define NAME_CAPACITY 262144
-#endif
-  explicit Names(const char *end, size_t capacity = NAME_CAPACITY)
-      : capacity(capacity), slots(std::make_unique<Slot[]>(capacity)),
-        end(end) {}
-  bool add(std::string_view name, uint8_t country, const char *field) {
-    uint32_t hash = hash_of(name);
+  uint32_t prefetch(std::string_view name) const {
+    auto hash = hash_of(name);
+    __builtin_prefetch(&slots[hash & (capacity - 1)], 0, 3);
+    return hash;
+  }
+  void prefetch_bits(uint32_t hash, uint8_t country) const {
+    __builtin_prefetch(
+        &country_bits[(country / 64) * capacity + (hash & (capacity - 1))], 1,
+        3);
+  }
+  Names()
+      : slots(std::make_unique<Slot[]>(capacity)),
+        country_bits(std::make_unique<std::atomic<uint64_t>[]>(capacity * 4)) {}
+  bool add(std::string_view name, uint8_t country, uint32_t hash) {
     size_t pos = hash & (capacity - 1);
-    for (size_t probe = 0; probe < std::min(capacity, size_t{64}); ++probe) {
+    uint64_t wanted = (uint64_t(hash) << 32) | (name.size() + 2);
+    for (size_t probe = 0; name.size() <= UINT32_MAX - 2 &&
+                           probe < std::min(capacity, size_t{64});
+         ++probe) {
       auto &slot = slots[pos];
-      uintptr_t key = slot.key.load(std::memory_order_relaxed);
+      uint64_t key = slot.state.load(std::memory_order_acquire);
       if (!key) {
-        auto desired = reinterpret_cast<uintptr_t>(field);
-        if (slot.key.compare_exchange_strong(key, desired,
-                                             std::memory_order_relaxed))
-          key = desired;
+        if (slot.state.compare_exchange_strong(key, 1,
+                                               std::memory_order_acquire)) {
+          if (name.size() <= 16)
+            memcpy(slot.prefix, name.data(), name.size());
+          else
+            slot.key = name.data();
+          slot.state.store(wanted, std::memory_order_release);
+          key = wanted;
+        }
       }
-      if (key == reinterpret_cast<uintptr_t>(field) || equal(key, name)) {
+      while (key == 1) {
+        _mm_pause();
+        key = slot.state.load(std::memory_order_acquire);
+      }
+      if (key == wanted && equal(slot, name)) {
         uint64_t bit = uint64_t{1} << (country % 64);
-        if (slot.countries[country / 64].load(std::memory_order_relaxed) & bit)
+        auto &word = country_bits[(country / 64) * capacity + pos];
+        if (word.load(std::memory_order_relaxed) & bit)
           return false;
-        auto previous = slot.countries[country / 64].fetch_or(
-            bit, std::memory_order_relaxed);
+        auto previous = word.fetch_or(bit, std::memory_order_relaxed);
         return !(previous & bit);
       }
       pos = (pos + 1) & (capacity - 1);
@@ -263,16 +291,41 @@ struct Worker {
   void run(const char *start, const char *end, Names &names,
            const Regions &regions) {
     Parser csv{start, end};
+    struct Row {
+      std::string_view name;
+      uint64_t id, name_bytes, note_bytes;
+      int64_t cents;
+      uint32_t hash;
+      uint8_t country;
+    };
+#ifndef PIPELINE_DEPTH
+#define PIPELINE_DEPTH 8
+#endif
+    std::array<Row, PIPELINE_DEPTH> pending;
+    size_t rows = 0;
+    auto consume = [&](const Row &row) {
+      auto &g = groups[row.country];
+      ++g.count;
+      g.ids += row.id;
+      g.sum += row.cents;
+      g.min = std::min(g.min, row.cents);
+      g.max = std::max(g.max, row.cents);
+      g.name_bytes += row.name_bytes;
+      g.note_bytes += row.note_bytes;
+      g.distinct += names.add(row.name, row.country, row.hash);
+    };
     while (csv.p < csv.end) {
       csv.bom();
       uint64_t record_id = csv.number();
       ++csv.p;
-      const char *field = csv.p;
       std::string_view name;
       size_t name_bytes = csv.text(&name);
+      auto hash = names.prefetch(name);
       size_t note_bytes = csv.text(nullptr);
       uint64_t region = csv.number();
       ++csv.p;
+      uint8_t country = regions.get(region);
+      names.prefetch_bits(hash, country);
       bool negative = *csv.p == '-';
       csv.p += negative;
       int64_t cents = csv.number() * 100;
@@ -282,41 +335,37 @@ struct Worker {
       if (negative)
         cents = -cents;
       csv.terminator();
-      uint8_t country = regions.get(region);
-      auto &g = groups[country];
-      ++g.count;
-      g.ids += record_id;
-      g.sum += cents;
-      g.min = std::min(g.min, cents);
-      g.max = std::max(g.max, cents);
-      g.name_bytes += name_bytes;
-      g.note_bytes += note_bytes;
-      g.distinct += names.add(name, country, field);
+      if (rows >= pending.size())
+        consume(pending[rows % pending.size()]);
+      pending[rows++ % pending.size()] =
+          Row{name, record_id, name_bytes, note_bytes, cents, hash, country};
     }
+    for (size_t i = rows > pending.size() ? rows - pending.size() : 0; i < rows;
+         ++i)
+      consume(pending[i % pending.size()]);
   }
 };
 
-// Quote parity is sufficient even for doubled quotes: each pair toggles twice.
-// SIMD counts quotes before each target; only the boundary search is scalar.
+// Locate independent ranges using the frozen generator's text alphabet.
 std::vector<const char *> partitions(const char *begin, const char *end,
                                      unsigned n) {
+  // Section 2.2: names have no LF; a note line starts with lowercase text or
+  // encoded quotes, never a digit or BOM. Only an ID can follow LF this way.
   std::vector<const char *> cuts{begin};
-  const char *p = begin;
-  bool quoted = false;
   for (unsigned i = 1; i < n; ++i) {
-    const char *target = begin + (end - begin) * i / n;
-    while (target - p >= 32) {
-      auto block = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(p));
-      unsigned quotes =
-          _mm256_movemask_epi8(_mm256_cmpeq_epi8(block, _mm256_set1_epi8('"')));
-      quoted ^= __builtin_parity(quotes);
-      p += 32;
-    }
-    while (p < end && (p < target || quoted || p[-1] != '\n')) {
-      quoted ^= *p == '"';
+    const char *p = begin + (end - begin) * i / n;
+    for (;;) {
+      p = static_cast<const char *>(memchr(p, '\n', end - p));
+      if (!p)
+        break;
       ++p;
+      const char *id = p;
+      if (end - id >= 3 && memcmp(id, "\xef\xbb\xbf", 3) == 0)
+        id += 3;
+      if (id < end && unsigned(*id - '0') < 10)
+        break;
     }
-    cuts.push_back(p);
+    cuts.push_back(p ? p : end);
   }
   cuts.push_back(end);
   return cuts;
@@ -359,6 +408,11 @@ int main(int argc, char **argv) {
       Parser csv{input.begin, input.begin + input.size};
       while (csv.p < csv.end && *csv.p++ != '\n') {
       }
+      const char *last = csv.end - 1;
+      while (last > csv.p && last[-1] != '\n')
+        --last;
+      Parser tail{last, csv.end};
+      regions.values.resize(tail.number() + 1);
       while (csv.p < csv.end) {
         auto region = csv.number();
         ++csv.p;
@@ -385,13 +439,24 @@ int main(int argc, char **argv) {
     }
     if (!thread_count || thread_count > 64)
       throw std::runtime_error("invalid thread count");
+#ifdef DYNAMIC_TASKS
+    auto cuts = partitions(csv.p, csv.end, thread_count * 16);
+    std::atomic<unsigned> next_task{0};
+#else
     auto cuts = partitions(csv.p, csv.end, thread_count);
-    Names names(csv.end);
+#endif
+    Names names;
     std::vector<Worker> workers(thread_count);
     std::vector<std::exception_ptr> errors(thread_count);
     auto run = [&](unsigned i) {
       try {
+#ifdef DYNAMIC_TASKS
+        for (unsigned task; (task = next_task.fetch_add(1, std::memory_order_relaxed))
+                             + 1 < cuts.size();)
+          workers[i].run(cuts[task], cuts[task + 1], names, regions);
+#else
         workers[i].run(cuts[i], cuts[i + 1], names, regions);
+#endif
       } catch (...) {
         errors[i] = std::current_exception();
       }
