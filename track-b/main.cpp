@@ -95,38 +95,54 @@ U64 hashkey(const Key &k) {
 // Fold only letters: digit tests use raw bytes so control bytes stay
 // separators.
 template <class F> void tokenize(const char *p, const char *end, F &&f) {
-  while (p < end) {
-    while (p < end && !tokenchar(*p))
-      ++p;
-    if (p == end)
-      break;
-    if (end - p >= 16) {
-      auto raw = _mm_loadu_si128(reinterpret_cast<const __m128i *>(p));
-      auto x = _mm_or_si128(raw, _mm_set1_epi8(32));
-      auto letters = _mm_and_si128(_mm_cmpgt_epi8(x, _mm_set1_epi8('a' - 1)),
-                                   _mm_cmpgt_epi8(_mm_set1_epi8('z' + 1), x));
-      auto digits = _mm_and_si128(_mm_cmpgt_epi8(raw, _mm_set1_epi8('0' - 1)),
-                                  _mm_cmpgt_epi8(_mm_set1_epi8('9' + 1), raw));
-      U32 mask = _mm_movemask_epi8(_mm_or_si128(letters, digits));
-      if (!(mask & 1)) {
-        p += mask ? std::countr_zero(mask) : 16;
+  // Classify 32 original bytes in parallel. High-bit bytes are separators.
+  // A token can span blocks, so keep its first byte until its end is known.
+  const char *open = nullptr;
+  const __m256i ascii_case = _mm256_set1_epi8(32);
+  const __m256i amin = _mm256_set1_epi8('a' - 1);
+  const __m256i amax = _mm256_set1_epi8('z' + 1);
+  const __m256i nmin = _mm256_set1_epi8('0' - 1);
+  const __m256i nmax = _mm256_set1_epi8('9' + 1);
+  while (end - p >= 32) {
+    __m256i raw = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(p));
+    __m256i x = _mm256_or_si256(raw, ascii_case);
+    __m256i az = _mm256_and_si256(_mm256_cmpgt_epi8(x, amin),
+                                  _mm256_cmpgt_epi8(amax, x));
+    __m256i digit = _mm256_and_si256(_mm256_cmpgt_epi8(raw, nmin),
+                                     _mm256_cmpgt_epi8(nmax, raw));
+    U32 mask = U32(_mm256_movemask_epi8(_mm256_or_si256(az, digit)));
+    if (open) {
+      U32 run = std::countr_one(mask);
+      if (run == 32) {
+        p += 32;
         continue;
       }
-      U32 n = std::countr_zero(~mask);
-      if (n < 16) {
-        f(p, n);
-        p += n;
-        continue;
+      f(open, U32(p + run - open));
+      open = nullptr;
+      mask &= ~((U32(1) << run) - 1); // keep only bits after initial token
+    }
+    while (mask) {
+      U32 begin = std::countr_zero(mask);
+      U32 len = std::countr_one(mask >> begin);
+      if (begin + len == 32) {
+        open = p + begin;
+        break;
       }
+      f(p + begin, len);
+      mask &= ~((U32(1) << (begin + len)) - 1);
     }
-    if (!tokenchar(*p)) {
-      ++p;
-      continue;
-    }
-    const char *s = p++;
-    while (p < end && tokenchar(*p))
-      ++p;
+    p += 32;
+  }
+  if (open) {
+    const char *s = open;
+    while (p < end && tokenchar(*p)) ++p;
     f(s, U32(p - s));
+  }
+  while (p < end) {
+    while (p < end && !tokenchar(*p)) ++p;
+    const char *s = p;
+    while (p < end && tokenchar(*p)) ++p;
+    if (p != s) f(s, U32(p - s));
   }
 }
 
@@ -395,9 +411,31 @@ Result boolean(const Query &q, const std::vector<Term> &terms,
   if (dense) {
     for (size_t j = 0; j < p.words; ++j) {
       U64 b = s.bits[j];
-      while (b) {
-        r.add(p.base + U32(j * 64 + std::countr_zero(b)));
-        b &= b - 1;
+      if (!b) continue;
+      unsigned n = std::popcount(b);
+      if (n >= 10) {
+        if (r.count < 10) {
+          U64 first = b;
+          U32 dest = U32(r.count);
+          while (first && dest < 10) {
+            r.first[dest++] = p.base + U32(j * 64 + std::countr_zero(first));
+            first &= first - 1;
+          }
+        }
+        // Sum of every set bit's position, calculated with six popcounts.
+        U64 weighted = U64(std::popcount(b & 0xAAAAAAAAAAAAAAAAULL)) +
+           2ULL * std::popcount(b & 0xCCCCCCCCCCCCCCCCULL) +
+           4ULL * std::popcount(b & 0xF0F0F0F0F0F0F0F0ULL) +
+           8ULL * std::popcount(b & 0xFF00FF00FF00FF00ULL) +
+           16ULL * std::popcount(b & 0xFFFF0000FFFF0000ULL) +
+           32ULL * std::popcount(b & 0xFFFFFFFF00000000ULL);
+        r.count += n;
+        r.sum += (U64(p.base) + U64(j) * 64) * n + weighted;
+      } else {
+        while (b) {
+          r.add(p.base + U32(j * 64 + std::countr_zero(b)));
+          b &= b - 1;
+        }
       }
     }
   } else
@@ -507,18 +545,41 @@ int main(int argc, char **argv) {
   for (auto &t : terms)
     if (t.boolean && t.bitmap < 0)
       t.posting = postings++;
-  for (U32 qi = 0; qi < queries.size(); ++qi) {
-    auto &q = queries[qi];
-    if (!q.phrase)
-      continue;
-    for (U32 j = 1; j < q.length; ++j) {
-      const auto &a = terms[q.terms[q.anchor]], &b = terms[q.terms[j]];
-      if (b.sample < a.sample || (b.sample == a.sample && b.usage < a.usage))
-        q.anchor = j;
+  U32 pair_count=0;
+  struct PairSlot { U64 key=0; int head=-1; };
+  std::vector<PairSlot> pairs(std::bit_ceil(std::max<U32>(16, U32(queries.size()*2))));
+  std::vector<uint8_t> pair_left(terms.size());
+  constexpr U64 pair_mul=0x9e3779b185ebca87ULL;
+  auto pairhash = [&](U64 k) { return U32((k ^ (k >> 29)) * pair_mul); };
+  for (U32 qi=0;qi<queries.size();++qi) {
+    auto &q=queries[qi];
+    if(!q.phrase) continue;
+    // Find its rarest single-word anchor.
+    for (U32 j=1;j<q.length;++j) {
+      const auto &a=terms[q.terms[q.anchor]], &b=terms[q.terms[j]];
+      if(b.sample<a.sample || (b.sample==a.sample && b.usage<a.usage)) q.anchor=j;
     }
-    auto &t = terms[q.terms[q.anchor]];
-    q.next = t.head;
-    t.head = qi;
+    if (terms[q.terms[q.anchor]].sample <= 8) {
+      auto &t=terms[q.terms[q.anchor]];
+      q.next=t.head;
+      t.head=qi;
+      continue;
+    }
+    // High-frequency single anchors use the rarest adjacent pair instead.
+    U64 best=UINT64_MAX;
+    for (U32 j=0;j+1<q.length;++j) {
+      U64 x=terms[q.terms[j]].sample, y=terms[q.terms[j+1]].sample;
+      U64 score=(std::min(x,y)<<32) | std::max(x,y);
+      if (score<best) { best=score; q.anchor=j; }
+    }
+    U32 u=q.terms[q.anchor], v=q.terms[q.anchor+1];
+    U64 k=(U64(u+1)<<32)|U64(v+1);
+    U32 idx=pairhash(k)&(pairs.size()-1);
+    while(pairs[idx].key && pairs[idx].key!=k) idx=(idx+1)&(pairs.size()-1);
+    q.next=pairs[idx].head;
+    pairs[idx]={k,int(qi)};
+    pair_left[u]=1;
+    ++pair_count;
   }
   std::fill(dict.slots.begin(), dict.slots.end(), Dictionary::Slot{});
   dict.count = 0;
@@ -595,6 +656,7 @@ int main(int argc, char **argv) {
       std::vector<U32> ids;
       ids.reserve(2048);
       std::vector<std::pair<U32, int>> anchors;
+      std::vector<U32> pair_candidates;
       const char *s = part.begin;
       U32 d = part.base;
       while (s < part.end) {
@@ -606,6 +668,7 @@ int main(int argc, char **argv) {
 
         ids.clear();
         anchors.clear();
+        pair_candidates.clear();
         U32 batch_count = 0;
         auto flush = [&]() {
           for (U32 i = 0; i < batch_count; ++i) {
@@ -634,6 +697,8 @@ int main(int argc, char **argv) {
             }
             if (term.head >= 0)
               anchors.emplace_back(position, term.head);
+            if (pair_left[id])
+              pair_candidates.push_back(position);
           }
           batch_count = 0;
         };
@@ -659,6 +724,26 @@ int main(int argc, char **argv) {
               part.phrase_hits.emplace_back(qi, d);
             }
           }
+        for (U32 i : pair_candidates) {
+          if (i+1 == ids.size()) continue;
+          U32 u=ids[i],v=ids[i+1];
+          if (v==UINT32_MAX) continue;
+          U64 k=(U64(u+1)<<32)|U64(v+1);
+          U32 slot=pairhash(k)&(pairs.size()-1);
+          while (pairs[slot].key && pairs[slot].key!=k)
+            slot=(slot+1)&(pairs.size()-1);
+          if (pairs[slot].key!=k) continue;
+          for (int qi=pairs[slot].head;qi>=0;qi=queries[qi].next) {
+            const auto &q=queries[qi];
+            if (matched[qi]!=d-part.base && i>=q.anchor &&
+                i-q.anchor+q.length <= ids.size() &&
+                std::equal(q.terms.begin(),q.terms.begin()+q.length,
+                           ids.begin()+i-q.anchor)) {
+              matched[qi]=PID(d-part.base);
+              part.phrase_hits.emplace_back(qi,d);
+            }
+          }
+        }
         s = finish + 1;
         ++d;
       }
