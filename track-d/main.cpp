@@ -288,7 +288,7 @@ template <class Word> struct Search {
       return s.key;
   }
   State &access(U32 vertex) {
-    U32 bucket = (U64(vertex) * 11400714819323198485ULL) >> 48;
+    U32 bucket = vertex & ((1U << 16) - 1);
     U32 id = head[bucket];
     while (id && key(states[id]) != vertex)
       id = next[id];
