@@ -1,0 +1,2071 @@
+{
+  "generated_utc": "2026-11-01T10:29:04.678838+00:00",
+  "scope": "Local development measurements; official board IDs, cgroup memory.peak, formatted scc S and K pending.",
+  "machine": "Intel Core i5-12450H; taskset 0-7, four P-cores/eight hardware threads; turbo and other activity uncontrolled.",
+  "compiler": "GCC 16.2.1 20260810",
+  "final_flags": "-std=c++20 -O3 -march=x86-64-v3 -mtune=alderlake -pthread -static -s",
+  "default_workers": 6,
+  "final_source_sha256": "60b7a0021b5b89bf2da38566ce943222e6e83f742610723b94ba21030f92ef9f",
+  "final_binary_sha256": "dd1e9ea50b30df44362d6804428856bf1b63addde8b51f560d774e6658ba4270",
+  "experimental_snapshot_sha256": "9ef14e4b7318c1790d8154fda46fe1fc89d452c7ce458b8b909fe8d622e2b5f5",
+  "memory_notes": "ru_maxrss is the kernel RSS high-water mark and includes file mappings. RssAnon was sampled at about 2 ms and can miss transients. Neither is official cgroup memory.peak.",
+  "final_summary": {
+    "sample": {
+      "median_s": 0.07725009899877477,
+      "trimmed_mean_s": 0.07877744866588425,
+      "times_s": [
+        0.08442938599910121,
+        0.06954901800054358,
+        0.07465286099977675,
+        0.08859023399782018,
+        0.07725009899877477
+      ],
+      "max_rss_kib": 25460,
+      "max_sampled_anon_kib": 19772,
+      "output_sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+    },
+    "full": {
+      "median_s": 1.0756054560006305,
+      "trimmed_mean_s": 1.0715460883329797,
+      "times_s": [
+        1.118020861002151,
+        1.0181173109995143,
+        1.0956405299984908,
+        1.0756054560006305,
+        1.0433922789998178
+      ],
+      "max_rss_kib": 254760,
+      "max_sampled_anon_kib": 175696,
+      "output_sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+    }
+  },
+  "verification": {
+    "official_handwritten_cases": 7,
+    "random_multigraphs": 80,
+    "random_seed": 77019,
+    "independent_oracle": "All-pairs Floyd-Warshall",
+    "worker_counts": [
+      1,
+      4,
+      6
+    ],
+    "tiny_seeds": [
+      1,
+      2,
+      7,
+      42
+    ],
+    "sample_seeds": [
+      1,
+      2,
+      7
+    ],
+    "full_seeds": [
+      1
+    ],
+    "generation_wrap_queries": 3000,
+    "compact_cutoff": true,
+    "widen_before_add": true,
+    "empty_queries": true,
+    "address_sanitizer": "PASS; leak detection disabled because sandbox tracing prevents LeakSanitizer",
+    "undefined_behavior_sanitizer": "PASS",
+    "dockerfile_allowlist": "PASS",
+    "static_host_binary": "PASS",
+    "docker_build_and_sandbox": "UNVERIFIED: Docker socket inaccessible",
+    "official_run_ids": "Pending"
+  },
+  "experiments": [
+    {
+      "config": {
+        "D_FORWARD": 1,
+        "D_RADIX": 0,
+        "D_THREADS": 1
+      },
+      "median_s": 0.5826387630004319,
+      "max_rss_kib": 28172,
+      "runs": [
+        {
+          "time": 0.5406807180006581,
+          "rss_kib": 28172,
+          "phases": "load=0.034752 query=0.501436",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.534498828001233,
+          "rss_kib": 28012,
+          "phases": "load=0.034279 query=0.496469",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.615905571001349,
+          "rss_kib": 27960,
+          "phases": "load=0.052801 query=0.558064",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.6605322530012927,
+          "rss_kib": 28084,
+          "phases": "load=0.077565 query=0.574202",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.5826387630004319,
+          "rss_kib": 28056,
+          "phases": "load=0.038267 query=0.539901",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        }
+      ]
+    },
+    {
+      "config": {
+        "D_FORWARD": 0,
+        "D_RADIX": 0,
+        "D_THREADS": 1
+      },
+      "median_s": 0.3176324529995327,
+      "max_rss_kib": 28076,
+      "runs": [
+        {
+          "time": 0.3064630400003807,
+          "rss_kib": 28024,
+          "phases": "load=0.034813 query=0.267296",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.37423438399855513,
+          "rss_kib": 27944,
+          "phases": "load=0.050510 query=0.319452",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.28646705899882363,
+          "rss_kib": 28024,
+          "phases": "load=0.036296 query=0.245641",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.33311784399847966,
+          "rss_kib": 28076,
+          "phases": "load=0.059146 query=0.269356",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.3176324529995327,
+          "rss_kib": 28000,
+          "phases": "load=0.042159 query=0.271376",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        }
+      ]
+    },
+    {
+      "config": {
+        "D_FORWARD": 0,
+        "D_RADIX": 1,
+        "D_THREADS": 1
+      },
+      "median_s": 0.16828223699849332,
+      "max_rss_kib": 28176,
+      "runs": [
+        {
+          "time": 0.17438683199725347,
+          "rss_kib": 27964,
+          "phases": "load=0.036510 query=0.133690",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.165259117999085,
+          "rss_kib": 28048,
+          "phases": "load=0.034104 query=0.127094",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.16828223699849332,
+          "rss_kib": 28176,
+          "phases": "load=0.035229 query=0.128999",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.1636707439974998,
+          "rss_kib": 28024,
+          "phases": "load=0.033767 query=0.125884",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.1915483150005457,
+          "rss_kib": 28172,
+          "phases": "load=0.052377 query=0.135234",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        }
+      ]
+    },
+    {
+      "config": {
+        "D_FORWARD": 0,
+        "D_RADIX": 1,
+        "D_THREADS": 4
+      },
+      "median_s": 0.09028089200000977,
+      "max_rss_kib": 28704,
+      "runs": [
+        {
+          "time": 0.09075565700186417,
+          "rss_kib": 28636,
+          "phases": "load=0.034703 query=0.051887",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.09688314799859654,
+          "rss_kib": 28704,
+          "phases": "load=0.034291 query=0.057662",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.09028089200000977,
+          "rss_kib": 28420,
+          "phases": "load=0.034846 query=0.050778",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.08904647700182977,
+          "rss_kib": 28132,
+          "phases": "load=0.034428 query=0.049761",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.08799264499975834,
+          "rss_kib": 28496,
+          "phases": "load=0.034274 query=0.048661",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_FORWARD": 1,
+        "D_RADIX": 0,
+        "D_THREADS": 1
+      },
+      "median_s": 9.887391273001413,
+      "max_rss_kib": 257440,
+      "runs": [
+        {
+          "time": 9.887391273001413,
+          "rss_kib": 257252,
+          "phases": "load=0.554685 query=9.327460",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 10.255228989000898,
+          "rss_kib": 257344,
+          "phases": "load=0.705534 query=9.546001",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 9.750196461001906,
+          "rss_kib": 257440,
+          "phases": "load=0.663505 query=9.082156",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 0,
+        "D_THREADS": 1
+      },
+      "median_s": 3.9692080519998854,
+      "max_rss_kib": 257440,
+      "runs": [
+        {
+          "time": 4.007398272999126,
+          "rss_kib": 257372,
+          "phases": "load=0.624492 query=3.378399",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 3.440823010998429,
+          "rss_kib": 257440,
+          "phases": "load=0.581824 query=2.854517",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 3.9692080519998854,
+          "rss_kib": 257280,
+          "phases": "load=0.655780 query=3.309062",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 1
+      },
+      "median_s": 2.349999400001252,
+      "max_rss_kib": 257396,
+      "runs": [
+        {
+          "time": 2.349999400001252,
+          "rss_kib": 257340,
+          "phases": "load=0.566230 query=1.779532",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 2.1505535040014365,
+          "rss_kib": 257396,
+          "phases": "load=0.535747 query=1.610690",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 2.4196104279981228,
+          "rss_kib": 257340,
+          "phases": "load=0.566381 query=1.849309",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4
+      },
+      "median_s": 1.167587211002683,
+      "max_rss_kib": 257448,
+      "runs": [
+        {
+          "time": 1.2822452020009223,
+          "rss_kib": 257348,
+          "phases": "load=0.552490 query=0.724701",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.167587211002683,
+          "rss_kib": 257448,
+          "phases": "load=0.565002 query=0.596995",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.1425140860010288,
+          "rss_kib": 257428,
+          "phases": "load=0.564379 query=0.573268",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_REORDER": 1
+      },
+      "median_s": 1.2800296780005738,
+      "max_rss_kib": 257436,
+      "runs": [
+        {
+          "time": 1.2482770380011061,
+          "rss_kib": 257372,
+          "phases": "load=1.012861 query=0.230311",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.4612001679997775,
+          "rss_kib": 257160,
+          "phases": "load=1.180770 query=0.274745",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.2800296780005738,
+          "rss_kib": 257436,
+          "phases": "load=1.045437 query=0.229571",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 1
+      },
+      "median_s": 2.3225872089969926,
+      "max_rss_kib": 257452,
+      "runs": [
+        {
+          "time": 2.3225872089969926,
+          "rss_kib": 257376,
+          "phases": "load=0.545003 query=1.772572",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 2.3087172689993167,
+          "rss_kib": 257360,
+          "phases": "load=0.529462 query=1.775095",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 2.4143511219990614,
+          "rss_kib": 257452,
+          "phases": "load=0.571221 query=1.837889",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 2
+      },
+      "median_s": 1.5167133420000027,
+      "max_rss_kib": 257444,
+      "runs": [
+        {
+          "time": 1.5520908090002195,
+          "rss_kib": 257372,
+          "phases": "load=0.582500 query=0.964286",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.5167133420000027,
+          "rss_kib": 257444,
+          "phases": "load=0.550357 query=0.961592",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.5139397089988051,
+          "rss_kib": 257356,
+          "phases": "load=0.561547 query=0.947998",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4
+      },
+      "median_s": 1.136551463001524,
+      "max_rss_kib": 257412,
+      "runs": [
+        {
+          "time": 1.2356058660006966,
+          "rss_kib": 257356,
+          "phases": "load=0.621603 query=0.609078",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.136551463001524,
+          "rss_kib": 257352,
+          "phases": "load=0.534854 query=0.596615",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.132342136999796,
+          "rss_kib": 257412,
+          "phases": "load=0.544822 query=0.582405",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6
+      },
+      "median_s": 1.1730305119999684,
+      "max_rss_kib": 265664,
+      "runs": [
+        {
+          "time": 1.1730305119999684,
+          "rss_kib": 265112,
+          "phases": "load=0.578452 query=0.589039",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.1827823200001149,
+          "rss_kib": 265044,
+          "phases": "load=0.565086 query=0.612120",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.1309456000017235,
+          "rss_kib": 265664,
+          "phases": "load=0.526824 query=0.598585",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 8
+      },
+      "median_s": 1.1754342200001702,
+      "max_rss_kib": 321944,
+      "runs": [
+        {
+          "time": 1.162030550000054,
+          "rss_kib": 321944,
+          "phases": "load=0.553336 query=0.602760",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.247518707998097,
+          "rss_kib": 321296,
+          "phases": "load=0.558224 query=0.682352",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.1754342200001702,
+          "rss_kib": 321692,
+          "phases": "load=0.579783 query=0.590115",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 12
+      },
+      "median_s": 1.166205360001186,
+      "max_rss_kib": 434048,
+      "runs": [
+        {
+          "time": 1.1844502319981984,
+          "rss_kib": 433844,
+          "phases": "load=0.554570 query=0.623588",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.166205360001186,
+          "rss_kib": 433728,
+          "phases": "load=0.536799 query=0.623017",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.1366662440013897,
+          "rss_kib": 434048,
+          "phases": "load=0.529682 query=0.600461",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1
+      },
+      "median_s": 1.115268964000279,
+      "max_rss_kib": 257376,
+      "runs": [
+        {
+          "time": 1.1409402370009047,
+          "rss_kib": 257376,
+          "phases": "load=0.547387 query=0.588808",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.1023883870002464,
+          "rss_kib": 257372,
+          "phases": "load=0.551552 query=0.545993",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.115268964000279,
+          "rss_kib": 257376,
+          "phases": "load=0.532864 query=0.577513",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_REORDER": 1
+      },
+      "median_s": 1.2291094760003034,
+      "max_rss_kib": 264296,
+      "runs": [
+        {
+          "time": 1.2291094760003034,
+          "rss_kib": 264296,
+          "phases": "load=0.994385 query=0.229201",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.1715315760011435,
+          "rss_kib": 264200,
+          "phases": "load=0.946124 query=0.220531",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.3202947530007805,
+          "rss_kib": 264292,
+          "phases": "load=1.093475 query=0.222070",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_REORDER": 1,
+        "D_BLOCK": 512
+      },
+      "median_s": 1.30670537900005,
+      "max_rss_kib": 264344,
+      "runs": [
+        {
+          "time": 1.2475128249971021,
+          "rss_kib": 264292,
+          "phases": "load=1.015558 query=0.226424",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.5621038169992971,
+          "rss_kib": 264344,
+          "phases": "load=1.319883 query=0.236999",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.30670537900005,
+          "rss_kib": 264280,
+          "phases": "load=1.071416 query=0.231108",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_REORDER": 1,
+        "D_BLOCK": 2048
+      },
+      "median_s": 1.164511584000138,
+      "max_rss_kib": 264332,
+      "runs": [
+        {
+          "time": 1.1024772160017164,
+          "rss_kib": 264292,
+          "phases": "load=0.875154 query=0.222505",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.3609111129990197,
+          "rss_kib": 264180,
+          "phases": "load=1.098950 query=0.257086",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.164511584000138,
+          "rss_kib": 264332,
+          "phases": "load=0.926611 query=0.233228",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1
+      },
+      "median_s": 1.308264973002224,
+      "max_rss_kib": 257520,
+      "runs": [
+        {
+          "time": 1.308264973002224,
+          "rss_kib": 257452,
+          "phases": "load=0.644187 query=0.658743",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.2456229099989287,
+          "rss_kib": 257416,
+          "phases": "load=0.579845 query=0.660722",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.500434685000073,
+          "rss_kib": 257448,
+          "phases": "load=0.712153 query=0.783633",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.2876713699988613,
+          "rss_kib": 257520,
+          "phases": "load=0.584687 query=0.697208",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.4711265080004523,
+          "rss_kib": 257232,
+          "phases": "load=0.746785 query=0.719470",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1,
+        "D_TWOPASS": 1
+      },
+      "median_s": 1.4034261330016307,
+      "max_rss_kib": 207312,
+      "runs": [
+        {
+          "time": 1.4449825039991993,
+          "rss_kib": 207112,
+          "phases": "load=0.745965 query=0.693530",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.2797038440003234,
+          "rss_kib": 207312,
+          "phases": "load=0.653158 query=0.621569",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.3279206589977548,
+          "rss_kib": 207180,
+          "phases": "load=0.743086 query=0.579566",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.4034261330016307,
+          "rss_kib": 207296,
+          "phases": "load=0.653327 query=0.745018",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.614406324999436,
+          "rss_kib": 207168,
+          "phases": "load=0.798622 query=0.810625",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_NARROW": 1
+      },
+      "median_s": 1.6166308629981359,
+      "max_rss_kib": 257460,
+      "runs": [
+        {
+          "time": 1.7395831989997532,
+          "rss_kib": 257456,
+          "phases": "load=0.865039 query=0.869532",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.577552047001518,
+          "rss_kib": 257448,
+          "phases": "load=0.724219 query=0.849196",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.6739828300014779,
+          "rss_kib": 257432,
+          "phases": "load=0.816081 query=0.851947",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.4648012580000795,
+          "rss_kib": 257460,
+          "phases": "load=0.704049 query=0.756426",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.6166308629981359,
+          "rss_kib": 257432,
+          "phases": "load=0.857601 query=0.754489",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_NARROW": 1,
+        "D_TWOPASS": 1
+      },
+      "median_s": 1.546144150001055,
+      "max_rss_kib": 199024,
+      "runs": [
+        {
+          "time": 1.373797938998905,
+          "rss_kib": 198796,
+          "phases": "load=0.759648 query=0.610151",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.4993202000005112,
+          "rss_kib": 198956,
+          "phases": "load=0.771407 query=0.723562",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.6553604350010573,
+          "rss_kib": 199020,
+          "phases": "load=0.841935 query=0.808412",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.546144150001055,
+          "rss_kib": 198912,
+          "phases": "load=0.807646 query=0.733413",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.6858592880016658,
+          "rss_kib": 199024,
+          "phases": "load=0.881474 query=0.799423",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 2,
+        "D_NARROW": 1,
+        "D_TWOPASS": 1
+      },
+      "median_s": 1.8977069040010974,
+      "max_rss_kib": 198912,
+      "runs": [
+        {
+          "time": 1.8454852529976051,
+          "rss_kib": 198760,
+          "phases": "load=0.790135 query=1.050713",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.7608311399999366,
+          "rss_kib": 198748,
+          "phases": "load=0.729884 query=1.026402",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.8977069040010974,
+          "rss_kib": 198704,
+          "phases": "load=0.809110 query=1.083786",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 2.0216289310010325,
+          "rss_kib": 198896,
+          "phases": "load=0.881315 query=1.135423",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.9448977719985123,
+          "rss_kib": 198912,
+          "phases": "load=0.804357 query=1.136118",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1,
+        "D_TWOPASS": 1
+      },
+      "median_s": 1.3685500409992528,
+      "max_rss_kib": 199020,
+      "runs": [
+        {
+          "time": 1.436988122000912,
+          "rss_kib": 198888,
+          "phases": "load=0.797563 query=0.633024",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.529171073998441,
+          "rss_kib": 198876,
+          "phases": "load=0.874219 query=0.650210",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.3685500409992528,
+          "rss_kib": 198916,
+          "phases": "load=0.658225 query=0.705606",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.3234956390006118,
+          "rss_kib": 199012,
+          "phases": "load=0.648867 query=0.670285",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.3231351190006535,
+          "rss_kib": 199020,
+          "phases": "load=0.725109 query=0.593324",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_NARROW": 1,
+        "D_REORDER": 1,
+        "D_BLOCK": 2048
+      },
+      "median_s": 1.2422122130010393,
+      "max_rss_kib": 264388,
+      "runs": [
+        {
+          "time": 1.2330017809981655,
+          "rss_kib": 264144,
+          "phases": "load=0.993158 query=0.235319",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.2422122130010393,
+          "rss_kib": 264388,
+          "phases": "load=1.002172 query=0.235800",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.209998459999042,
+          "rss_kib": 264348,
+          "phases": "load=0.971282 query=0.234253",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.441409245999239,
+          "rss_kib": 264192,
+          "phases": "load=1.199960 query=0.236942",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.370347591000609,
+          "rss_kib": 264268,
+          "phases": "load=1.084047 query=0.281492",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.934938633999991,
+      "max_rss_kib": 207372,
+      "runs": [
+        {
+          "time": 1.934938633999991,
+          "rss_kib": 207372,
+          "phases": "load=1.174523 query=0.754259",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1,
+        "D_TWOPASS": 1
+      },
+      "median_s": 1.5051661629986484,
+      "max_rss_kib": 207292,
+      "runs": [
+        {
+          "time": 1.5051661629986484,
+          "rss_kib": 207292,
+          "phases": "load=0.875238 query=0.625112",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1
+      },
+      "median_s": 1.2372389850024774,
+      "max_rss_kib": 257456,
+      "runs": [
+        {
+          "time": 1.2372389850024774,
+          "rss_kib": 257456,
+          "phases": "load=0.559062 query=0.673243",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.2938492940011201,
+      "max_rss_kib": 199276,
+      "runs": [
+        {
+          "time": 1.2938492940011201,
+          "rss_kib": 199276,
+          "phases": "load=0.712290 query=0.576483",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_NARROW": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.5992288070010545,
+      "max_rss_kib": 199136,
+      "runs": [
+        {
+          "time": 1.5992288070010545,
+          "rss_kib": 199136,
+          "phases": "load=0.899803 query=0.693784",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.38020509800117,
+      "max_rss_kib": 207372,
+      "runs": [
+        {
+          "time": 1.38020509800117,
+          "rss_kib": 207372,
+          "phases": "load=0.673778 query=0.701514",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_NARROW": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.397982434998994,
+      "max_rss_kib": 199144,
+      "runs": [
+        {
+          "time": 1.397982434998994,
+          "rss_kib": 199144,
+          "phases": "load=0.696863 query=0.695355",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.2713947179981915,
+      "max_rss_kib": 199256,
+      "runs": [
+        {
+          "time": 1.2713947179981915,
+          "rss_kib": 199256,
+          "phases": "load=0.669294 query=0.596520",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1
+      },
+      "median_s": 1.023767727001541,
+      "max_rss_kib": 257428,
+      "runs": [
+        {
+          "time": 1.023767727001541,
+          "rss_kib": 257428,
+          "phases": "load=0.488198 query=0.531032",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1,
+        "D_TWOPASS": 1
+      },
+      "median_s": 1.230228257998533,
+      "max_rss_kib": 207212,
+      "runs": [
+        {
+          "time": 1.230228257998533,
+          "rss_kib": 207212,
+          "phases": "load=0.649049 query=0.575412",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.1234619700007897,
+      "max_rss_kib": 207232,
+      "runs": [
+        {
+          "time": 1.1234619700007897,
+          "rss_kib": 207232,
+          "phases": "load=0.590269 query=0.528337",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1,
+        "D_TWOPASS": 1
+      },
+      "median_s": 1.3922486629999185,
+      "max_rss_kib": 207036,
+      "runs": [
+        {
+          "time": 1.3922486629999185,
+          "rss_kib": 207036,
+          "phases": "load=0.695691 query=0.690822",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_NARROW": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.3531782959980774,
+      "max_rss_kib": 199348,
+      "runs": [
+        {
+          "time": 1.3531782959980774,
+          "rss_kib": 199348,
+          "phases": "load=0.797719 query=0.550284",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.1724640769971302,
+      "max_rss_kib": 199272,
+      "runs": [
+        {
+          "time": 1.1724640769971302,
+          "rss_kib": 199272,
+          "phases": "load=0.640646 query=0.527176",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1
+      },
+      "median_s": 1.097893184003624,
+      "max_rss_kib": 257304,
+      "runs": [
+        {
+          "time": 1.097893184003624,
+          "rss_kib": 257304,
+          "phases": "load=0.553713 query=0.538891",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1
+      },
+      "median_s": 1.2228925210001762,
+      "max_rss_kib": 257424,
+      "runs": [
+        {
+          "time": 1.2228925210001762,
+          "rss_kib": 257424,
+          "phases": "load=0.528527 query=0.688951",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.1166140009991068,
+      "max_rss_kib": 207364,
+      "runs": [
+        {
+          "time": 1.1166140009991068,
+          "rss_kib": 207364,
+          "phases": "load=0.580805 query=0.531117",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_NARROW": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.1521023800014518,
+      "max_rss_kib": 199276,
+      "runs": [
+        {
+          "time": 1.1521023800014518,
+          "rss_kib": 199276,
+          "phases": "load=0.620772 query=0.526245",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.281441688999621,
+      "max_rss_kib": 199304,
+      "runs": [
+        {
+          "time": 1.281441688999621,
+          "rss_kib": 199304,
+          "phases": "load=0.691668 query=0.584586",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1,
+        "D_TWOPASS": 1
+      },
+      "median_s": 1.3892610679977224,
+      "max_rss_kib": 207528,
+      "runs": [
+        {
+          "time": 1.3892610679977224,
+          "rss_kib": 207528,
+          "phases": "load=0.646524 query=0.737466",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_NARROW": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.4886705310018442,
+      "max_rss_kib": 199232,
+      "runs": [
+        {
+          "time": 1.4886705310018442,
+          "rss_kib": 199232,
+          "phases": "load=0.706566 query=0.776849",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.3850538289989345,
+      "max_rss_kib": 199340,
+      "runs": [
+        {
+          "time": 1.3850538289989345,
+          "rss_kib": 199340,
+          "phases": "load=0.761594 query=0.618650",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1
+      },
+      "median_s": 1.3809645569999702,
+      "max_rss_kib": 257264,
+      "runs": [
+        {
+          "time": 1.3809645569999702,
+          "rss_kib": 257264,
+          "phases": "load=0.694192 query=0.681521",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1,
+        "D_TWOPASS": 1,
+        "D_PARLOAD": 1
+      },
+      "median_s": 1.3580431869995664,
+      "max_rss_kib": 207352,
+      "runs": [
+        {
+          "time": 1.3580431869995664,
+          "rss_kib": 207352,
+          "phases": "load=0.670739 query=0.681863",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1,
+        "D_TWOPASS": 1
+      },
+      "median_s": 1.4561401729988575,
+      "max_rss_kib": 207288,
+      "runs": [
+        {
+          "time": 1.4561401729988575,
+          "rss_kib": 207288,
+          "phases": "load=0.636035 query=0.815170",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_NARROW": 1,
+        "D_FASTHEAP": 1
+      },
+      "median_s": 1.4212098040006822,
+      "max_rss_kib": 257528,
+      "max_anon_kib": 164148,
+      "runs": [
+        {
+          "time": 1.4212098040006822,
+          "rss_kib": 257528,
+          "anon_kib": 164148,
+          "phases": "load=0.658685 query=0.756936",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_PACKED": 1
+      },
+      "median_s": 1.1941354429982312,
+      "max_rss_kib": 262888,
+      "max_anon_kib": 259480,
+      "runs": [
+        {
+          "time": 1.1941354429982312,
+          "rss_kib": 262888,
+          "anon_kib": 259480,
+          "phases": "load=0.619019 query=0.569511",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1
+      },
+      "median_s": 1.3586259189978591,
+      "max_rss_kib": 257464,
+      "max_anon_kib": 203588,
+      "runs": [
+        {
+          "time": 1.3586259189978591,
+          "rss_kib": 257464,
+          "anon_kib": 203588,
+          "phases": "load=0.679963 query=0.671628",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1,
+        "D_FASTHEAP": 1
+      },
+      "median_s": 1.363047139999253,
+      "max_rss_kib": 257464,
+      "max_anon_kib": 175728,
+      "runs": [
+        {
+          "time": 1.363047139999253,
+          "rss_kib": 257464,
+          "anon_kib": 175728,
+          "phases": "load=0.658038 query=0.699232",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1
+      },
+      "median_s": 1.1807132629983244,
+      "max_rss_kib": 257528,
+      "max_anon_kib": 177632,
+      "runs": [
+        {
+          "time": 1.1807132629983244,
+          "rss_kib": 257528,
+          "anon_kib": 177632,
+          "phases": "load=0.594534 query=0.581439",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_NARROW": 1,
+        "D_FASTHEAP": 1
+      },
+      "median_s": 1.293119014997501,
+      "max_rss_kib": 257444,
+      "max_anon_kib": 164152,
+      "runs": [
+        {
+          "time": 1.293119014997501,
+          "rss_kib": 257444,
+          "anon_kib": 164152,
+          "phases": "load=0.654261 query=0.633683",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1
+      },
+      "median_s": 1.3082757750016754,
+      "max_rss_kib": 257356,
+      "max_anon_kib": 177812,
+      "runs": [
+        {
+          "time": 1.3082757750016754,
+          "rss_kib": 257356,
+          "anon_kib": 177812,
+          "phases": "load=0.726468 query=0.575633",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1,
+        "D_FASTHEAP": 1
+      },
+      "median_s": 1.143106159997842,
+      "max_rss_kib": 257536,
+      "max_anon_kib": 175764,
+      "runs": [
+        {
+          "time": 1.143106159997842,
+          "rss_kib": 257536,
+          "anon_kib": 175764,
+          "phases": "load=0.581162 query=0.557009",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1
+      },
+      "median_s": 1.0653036940020684,
+      "max_rss_kib": 257464,
+      "max_anon_kib": 203612,
+      "runs": [
+        {
+          "time": 1.0653036940020684,
+          "rss_kib": 257464,
+          "anon_kib": 203612,
+          "phases": "load=0.544396 query=0.515541",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_PACKED": 1
+      },
+      "median_s": 1.0707458920005593,
+      "max_rss_kib": 262768,
+      "max_anon_kib": 259416,
+      "runs": [
+        {
+          "time": 1.0707458920005593,
+          "rss_kib": 262768,
+          "anon_kib": 259416,
+          "phases": "load=0.538248 query=0.526321",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_NARROW": 1,
+        "D_FASTHEAP": 1
+      },
+      "median_s": 1.1008339849977347,
+      "max_rss_kib": 257464,
+      "max_anon_kib": 164148,
+      "runs": [
+        {
+          "time": 1.1008339849977347,
+          "rss_kib": 257464,
+          "anon_kib": 164148,
+          "phases": "load=0.546968 query=0.548021",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_PACKED": 1
+      },
+      "median_s": 1.2874566929967841,
+      "max_rss_kib": 262560,
+      "max_anon_kib": 259264,
+      "runs": [
+        {
+          "time": 1.2874566929967841,
+          "rss_kib": 262560,
+          "anon_kib": 259264,
+          "phases": "load=0.736942 query=0.543003",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1
+      },
+      "median_s": 1.2213666589996137,
+      "max_rss_kib": 257528,
+      "max_anon_kib": 177652,
+      "runs": [
+        {
+          "time": 1.2213666589996137,
+          "rss_kib": 257528,
+          "anon_kib": 177652,
+          "phases": "load=0.698433 query=0.518722",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1,
+        "D_FASTHEAP": 1
+      },
+      "median_s": 1.1570810480006912,
+      "max_rss_kib": 257360,
+      "max_anon_kib": 175640,
+      "runs": [
+        {
+          "time": 1.1570810480006912,
+          "rss_kib": 257360,
+          "anon_kib": 175640,
+          "phases": "load=0.636677 query=0.515988",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1
+      },
+      "median_s": 1.1304405499977292,
+      "max_rss_kib": 257352,
+      "max_anon_kib": 203680,
+      "runs": [
+        {
+          "time": 1.1304405499977292,
+          "rss_kib": 257352,
+          "anon_kib": 203680,
+          "phases": "load=0.570587 query=0.553504",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1
+      },
+      "median_s": 1.2464694489972317,
+      "max_rss_kib": 257488,
+      "max_anon_kib": 203664,
+      "runs": [
+        {
+          "time": 1.2464694489972317,
+          "rss_kib": 257488,
+          "anon_kib": 203664,
+          "phases": "load=0.602919 query=0.637092",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_NARROW": 1,
+        "D_FASTHEAP": 1
+      },
+      "median_s": 1.089897223002481,
+      "max_rss_kib": 257456,
+      "max_anon_kib": 164152,
+      "runs": [
+        {
+          "time": 1.089897223002481,
+          "rss_kib": 257456,
+          "anon_kib": 164152,
+          "phases": "load=0.516264 query=0.567036",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1
+      },
+      "median_s": 1.0589313529999345,
+      "max_rss_kib": 257528,
+      "max_anon_kib": 177612,
+      "runs": [
+        {
+          "time": 1.0589313529999345,
+          "rss_kib": 257528,
+          "anon_kib": 177612,
+          "phases": "load=0.539825 query=0.514147",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1,
+        "D_FASTHEAP": 1
+      },
+      "median_s": 1.1060338409988617,
+      "max_rss_kib": 257456,
+      "max_anon_kib": 175724,
+      "runs": [
+        {
+          "time": 1.1060338409988617,
+          "rss_kib": 257456,
+          "anon_kib": 175724,
+          "phases": "load=0.547731 query=0.552538",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_PACKED": 1
+      },
+      "median_s": 1.073037761998421,
+      "max_rss_kib": 262616,
+      "max_anon_kib": 259268,
+      "runs": [
+        {
+          "time": 1.073037761998421,
+          "rss_kib": 262616,
+          "anon_kib": 259268,
+          "phases": "load=0.545750 query=0.520441",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1
+      },
+      "median_s": 1.0551159790011297,
+      "max_rss_kib": 257460,
+      "max_anon_kib": 177748,
+      "runs": [
+        {
+          "time": 1.0551159790011297,
+          "rss_kib": 257460,
+          "anon_kib": 177748,
+          "phases": "load=0.540683 query=0.508825",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_NARROW": 1,
+        "D_FASTHEAP": 1
+      },
+      "median_s": 1.0815421830011474,
+      "max_rss_kib": 257464,
+      "max_anon_kib": 175752,
+      "runs": [
+        {
+          "time": 1.0815421830011474,
+          "rss_kib": 257464,
+          "anon_kib": 175752,
+          "phases": "load=0.535727 query=0.540348",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_PACKED": 1
+      },
+      "median_s": 1.2668941839983745,
+      "max_rss_kib": 257464,
+      "max_anon_kib": 203720,
+      "runs": [
+        {
+          "time": 1.2668941839983745,
+          "rss_kib": 257464,
+          "anon_kib": 203720,
+          "phases": "load=0.540274 query=0.720880",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 4,
+        "D_NARROW": 1,
+        "D_FASTHEAP": 1
+      },
+      "median_s": 1.371270135998202,
+      "max_rss_kib": 257528,
+      "max_anon_kib": 164148,
+      "runs": [
+        {
+          "time": 1.371270135998202,
+          "rss_kib": 257528,
+          "anon_kib": 164148,
+          "phases": "load=0.767988 query=0.597970",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "scale": "full",
+      "config": {
+        "D_RADIX": 1,
+        "D_THREADS": 6,
+        "D_PACKED": 1
+      },
+      "median_s": 1.1781002770003397,
+      "max_rss_kib": 262804,
+      "max_anon_kib": 259252,
+      "runs": [
+        {
+          "time": 1.1781002770003397,
+          "rss_kib": 262804,
+          "anon_kib": 259252,
+          "phases": "load=0.556862 query=0.614379",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    },
+    {
+      "stage": "final",
+      "scale": "sample",
+      "config": {},
+      "median_s": 0.07725009899877477,
+      "max_rss_kib": 25460,
+      "max_anon_kib": 19772,
+      "runs": [
+        {
+          "time": 0.08442938599910121,
+          "rss_kib": 25408,
+          "anon_kib": 19132,
+          "phases": "",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.06954901800054358,
+          "rss_kib": 25460,
+          "anon_kib": 19272,
+          "phases": "",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.07465286099977675,
+          "rss_kib": 25412,
+          "anon_kib": 19192,
+          "phases": "",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.08859023399782018,
+          "rss_kib": 25280,
+          "anon_kib": 19772,
+          "phases": "",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        },
+        {
+          "time": 0.07725009899877477,
+          "rss_kib": 25444,
+          "anon_kib": 18992,
+          "phases": "",
+          "sha256": "a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0"
+        }
+      ]
+    },
+    {
+      "stage": "final",
+      "scale": "full",
+      "config": {},
+      "median_s": 1.0756054560006305,
+      "max_rss_kib": 254760,
+      "max_anon_kib": 175696,
+      "runs": [
+        {
+          "time": 1.118020861002151,
+          "rss_kib": 254744,
+          "anon_kib": 175564,
+          "phases": "",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.0181173109995143,
+          "rss_kib": 254536,
+          "anon_kib": 175568,
+          "phases": "",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.0956405299984908,
+          "rss_kib": 254760,
+          "anon_kib": 175532,
+          "phases": "",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.0756054560006305,
+          "rss_kib": 254756,
+          "anon_kib": 175488,
+          "phases": "",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        },
+        {
+          "time": 1.0433922789998178,
+          "rss_kib": 254760,
+          "anon_kib": 175696,
+          "phases": "",
+          "sha256": "a23dbdf0a3e49cc8901310a9ee1dc6a9a569a85297b6da75c2a7002cb2ed277e"
+        }
+      ]
+    }
+  ]
+}
