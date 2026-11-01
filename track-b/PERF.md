@@ -198,3 +198,50 @@ No Git history change or external submission was made.
 See `../benchmarks/track-b/COMMANDS.md` for the shell command record, scripts for
 every experiment, `final-summary.json`, `final-compare.json`, `paired-summary.json`,
 `submission-audit.json`, and the per-run JSON files for raw evidence.
+
+## 2026-11-01 external follow-up (candidate; not an official board result)
+
+This section documents an independent development candidate after the
+"Final full-artifact runs" section above. No official leaderboard run ID is
+available; the previous official/full-seed timings must not be attributed to
+this modified source.
+
+Changes:
+
+1. The tokenizer classifies 32 bytes in one AVX2 block, carrying tokens across
+   block boundaries and handling the remaining bytes scalarly. Original byte
+   classifications, punctuation behavior and ASCII-only lowercasing are
+   preserved.
+2. Dense Boolean results with >=10 set bits per 64-bit word use POPCNT for
+   cardinality and weighted POPCNTs to compute the ID sum without enumerating
+   every matching ID. The ten smallest IDs are still extracted explicitly.
+3. Bloom-filter lookup, a direct-mapped token cache and a raw phrase verifier
+   were evaluated and rejected because they slowed the synthetic workload.
+   These experiments are **not** present in the candidate source.
+
+External benchmark: synthetic, not from the official generator. 100,000 docs,
+20,000 queries, 65,420,374-byte docs.txt, 610,032-byte queries.txt. Linux
+AMD EPYC virtual machine with cgroup CPU quota of four CPUs; GCC 14.2,
+`-O3 -std=c++23 -DNDEBUG -pthread -march=x86-64-v3`, B_THREADS=12. Interleaved
+11 runs of the source from the provided archive and the modified source,
+without profiler flags:
+
+| Variant | Median wall time | Middle-seven mean | SHA-256 of results.txt |
+|---|---:|---:|---|
+| Original archive | 507.56 ms | 504.57 ms | `561f3f32605eade6a65df2e756f4590850e0cd07576441194bfeeaec4cee8a3b` |
+| Updated candidate | 435.70 ms | 431.23 ms | `561f3f32605eade6a65df2e756f4590850e0cd07576441194bfeeaec4cee8a3b` |
+
+The 14.2% median wall-time reduction is local only. Workload, hardware,
+compiler, filesystem and scheduler are different from the board.
+
+Correctness: a separate 1,000-document / 1,000-query synthetic dataset matched
+the official Python reference byte-for-byte. For 25,000 documents/5,000
+queries and 100,000 documents/20,000 queries, the updated C++ output matched
+the original C++ binary byte-for-byte. The original and revised tokenizers
+produced identical token boundaries in 1,000,000 randomized byte streams,
+including arbitrary non-ASCII and control bytes. The candidate also completed
+AddressSanitizer and UndefinedBehaviorSanitizer checks on the 1,000-document,
+25,000-document, and 100,000-document synthetic sets, with LeakSanitizer
+disabled. Full official-dataset correctness and performance have **not** been
+verified in this environment. Add the actual board run ID and score following
+an official submission.
